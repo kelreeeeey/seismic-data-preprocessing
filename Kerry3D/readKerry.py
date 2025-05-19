@@ -18,15 +18,18 @@ def _():
     from more_itertools import batched
     from functools import reduce
     import matplotlib.pyplot as plt
+    from pathlib import Path
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"  # Only GPU 1 is visible to this code
-    return batched, mo, np, plt, read, reduce, time
+    return Path, batched, mo, np, plt, read, reduce, time
 
 
-@app.cell
-def _():
-    filename = './Kerry3D.segy'
-    return (filename,)
+@app.cell(hide_code=True)
+def _(Path):
+    filedir = Path(__file__).parent
+    filename = filedir / "Kerry3D.segy"
+    kerry_url = "http://s3.amazonaws.com/open.source.geoscience/open_data/newzealand/Taranaiki_Basin/Keri_3D/Kerry3D.segy"
+    return filedir, filename, kerry_url
 
 
 @app.cell(hide_code=True)
@@ -35,17 +38,40 @@ def _(mo):
     return
 
 
-@app.cell(hide_code=True)
-def _(filename, time):
-    t0=time.time()
-    try:
-        segy = _read_segy(filename)
-    except FileNotFoundError:
+@app.cell
+def _(filename, kerry_url, mo, read):
+    if filename.exists():
+        _ntask = 2
+        _spin = mo.status.progress_bar(
+            title="Preparing the SEGY Data ...",
+            completion_title="SEGY Data is ready",
+            total=_ntask)
+        with _spin as _spinner:
+            _spinner.update(subtitle="Loading the data")
+            segy = _read_segy(filename)
+            _spinner.update(subtitle="Reading data as stream")
+            stream = read(filename)
+    else:
+        _ntask = 3
         import subprocess
-        subprocess.run(["wget", "http://s3.amazonaws.com/open.source.geoscience/open_data/newzealand/Taranaiki_Basin/Keri_3D/Kerry3D.segy"])
-        segy = _read_segy(filename)
-    print('--> data read in {:.1f} sec'.format(time.time()-t0))
-    return (segy,)
+        _spin = mo.status.progress_bar(
+            title="Preparing the SEGY Data ...",
+            completion_title="SEGY Data is ready",
+            total=_ntask)
+        with _spin as _spinner:
+            _spinner.update(
+                subtitle=f"Downloading from {kerry_url} to {str(filename)}")
+            subprocess.run([
+                "wget",
+                "-O",
+                "./Kerry3D/Kerry3D.segy",
+                kerry_url])
+            _spinner.update(subtitle="Loading the data")
+            segy = _read_segy(filename)
+            _spinner.update(subtitle="Reading data as stream")
+            stream = read(filename)
+
+    return segy, stream
 
 
 @app.cell(hide_code=True)
@@ -147,70 +173,58 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(filename, read, time):
-    t0_1 = time.time()
-    print('sgy use read:')
-    stream = read(filename)
-    print('--> data read in {:.1f} min'.format((time.time() - t0_1) / 60))
-    return (stream,)
+def _(mo, np, stream):
+    # collection data from stream
+    n_stream = len(stream)+1
+    Bar_collecting_il_xl = mo.status.progress_bar(
+        title="Collectin INLINE & CROSSLINE Indexes",
+        completion_title="INLINE & CROSSLINE Indexes are collected",
+        total = n_stream
+    )
 
-
-@app.cell(hide_code=True)
-def _(stream):
     il = []
     xl = []
-    for i_3 in range(len(stream)):
-        trace_i_header_3 = stream[i_3].stats.segy.trace_header
-        il.append(trace_i_header_3.source_energy_direction_exponent)
-        xl.append(trace_i_header_3.ensemble_number)
-    return il, xl
+    n_ilines = 0
+    n_Xlines = 0
+    with Bar_collecting_il_xl as _bar:
+        for i_3 in range(n_stream-1):
+            _bar.update(subtitle=f"Collecting from stream-{i_3}")
+            trace_i_header_3 = stream[i_3].stats.segy.trace_header
+            il.append(trace_i_header_3.source_energy_direction_exponent)
+            xl.append(trace_i_header_3.ensemble_number)
+
+        ilines = np.unique(il)
+        n_ilines = len(ilines)
+        xlines = np.unique(xl)
+        n_xlines = len(xlines)
+        _bar.update(subtitle=f"Got {n_ilines} INLINES & {n_xlines} CROSSLINES")
+    return n_ilines, n_xlines
 
 
-@app.cell(hide_code=True)
-def _(il, np):
-    ilines = np.unique(il)
-    n_ilines = len(ilines)
-    print("N INLINES:", n_ilines)
-    return (n_ilines,)
+@app.cell
+def _(mo, n_ilines, n_xlines, np, nsample, ntraces, stream):
+    # streaming traces
+    Bar_collecting_trace = mo.status.progress_bar(
+        title="Collectin Data from Traces",
+        completion_title="Data are collected & masked",
+        total = ntraces + nsample
+    )
 
-
-@app.cell(hide_code=True)
-def _(np, xl):
-    xlines = np.unique(xl)
-    n_xlines = len(xlines)
-    print("N CROSSLINES:", n_xlines)
-    return (n_xlines,)
-
-
-@app.cell(hide_code=True)
-def _():
-    # from collections import Counter
-    # t0_2 = time.time()
-    # counter = Counter(il)
-    # print('Count in {:.1f} sec'.format(time.time() - t0_2))
-    # sorted(counter.items())
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""# this is a cube shape dataset.""")
-    return
-
-
-@app.cell(hide_code=True)
-def _(n_ilines, n_xlines, np, nsample, ntraces, stream, time):
     seis_np = np.zeros((n_ilines, n_xlines, nsample))
-    t0_3 = time.time()
-    for i_4 in range(ntraces):
-        tracei = stream[i_4]
-        il_1 = tracei.stats.segy.trace_header.source_energy_direction_exponent
-        xl_1 = tracei.stats.segy.trace_header.ensemble_number
-        seis_np[il_1 - 510][xl_1 - 58] = tracei.data
-    MASK = np.sum(np.abs(seis_np), axis=2)
-    MASK = np.where(MASK <= 0.10, True, False)
-    for _z in range(nsample):
-        seis_np[:, :, _z][MASK] = np.nan
+
+    with Bar_collecting_trace as _bar:
+        for i_4 in range(ntraces):
+            _bar.update(subtitle=f"Colleting data from trace-{i_4}")
+            tracei = stream[i_4]
+            il_1 = tracei.stats.segy.trace_header.source_energy_direction_exponent
+            xl_1 = tracei.stats.segy.trace_header.ensemble_number
+            seis_np[il_1 - 510][xl_1 - 58] = tracei.data
+
+        MASK = np.sum(np.abs(seis_np), axis=2)
+        MASK = np.where(MASK <= 0.10, True, False)
+        for _z in range(nsample):
+            _bar.update(subtitle=f"Masking data at vertical silce-{_z}")
+            seis_np[:, :, _z][MASK] = np.nan
 
     seis_stats = {}
     seis_flatten_ori = seis_np[~MASK]
@@ -225,8 +239,6 @@ def _(n_ilines, n_xlines, np, nsample, ntraces, stream, time):
     seis_stats['mean'] = SEIS_MEAN
     seis_stats['median'] = np.nanmedian(seis_flatten)
     seis_stats = [dict(Statistic=stat, Value=val) for stat, val in seis_stats.items()]
-
-    print('--> data write in {:.1f} min'.format((time.time() - t0_3) / 60))
     return (
         MASK,
         SEIS_MAX,
@@ -240,16 +252,24 @@ def _(n_ilines, n_xlines, np, nsample, ntraces, stream, time):
     )
 
 
-@app.cell
-def _(seis_flatten_ori):
-    seis_flatten_ori.shape
-    return
-
-
 @app.cell(hide_code=True)
 def _():
     from seiscm import seismic as seiscmap
-    return (seiscmap,)
+    from io import BytesIO, StringIO
+    import pandas as pd
+    from matplotlib import colors
+    import matplotlib.patches as pltPatches
+    import matplotlib.path as pltPath
+    from itertools import cycle
+
+    def save_fig_buf(f):
+            buf = BytesIO()
+            f.savefig(buf, format="png")
+            return buf
+
+    def save_tex_buf(string):
+        return string.encode("utf-8")
+    return cycle, pd, pltPatches, pltPath, save_fig_buf, save_tex_buf, seiscmap
 
 
 @app.cell(hide_code=True)
@@ -270,21 +290,16 @@ def _(mo, n_ilines, n_xlines):
 
 
 @app.cell
-def _(inline_full_num):
-    inline_full_num
+def _(depth_full_num, inline_full_num, mo, xline_full_num):
+    mo.hstack([
+        inline_full_num, depth_full_num, xline_full_num])
     return
 
 
 @app.cell
-def _(depth_full_num):
-    depth_full_num
-    return
-
-
-@app.cell
-def _(xline_full_num):
-    xline_full_num
-    return
+def _(SEIS_MAX, SEIS_MIN):
+    vminmax = dict(vmax=SEIS_MAX, vmin=SEIS_MIN)
+    return (vminmax,)
 
 
 @app.cell(hide_code=True)
@@ -370,9 +385,8 @@ def _(
 
 
 @app.cell(hide_code=True)
-def _(SEIS_MAX, SEIS_MIN):
-    vminmax = dict(vmax=SEIS_MAX, vmin=SEIS_MIN)
-    return (vminmax,)
+def _():
+    return
 
 
 @app.cell(hide_code=True)
@@ -421,35 +435,36 @@ def _(
 
 
 @app.cell
-def _():
-    return
-
-
-@app.cell(hide_code=True)
-def _(MASK, mo, np, seis_np, time):
+def _(MASK, filedir, mo, np, seis_np, time):
     def save_on_click(data=seis_np, suffix="", save_mask=False):
         t0_4 = time.time()
         with mo.status.progress_bar(
-            total=2,
+            total=2 if save_mask else 1,
             title="Saving The Data",
             subtitle="Please wait",
         ) as _bar:
-            np.savez('./kerry3d' + suffix, data)
+            _bar.update(subtitle="Saving Data")
+            np.savez(filedir / f"kerry3d{suffix}", data)
             if save_mask:
-                np.savez('./kerry3d_mask', MASK.astype(np.int16))
-            _bar.update()
+                np.savez(filedir / "kerry3d_mask", MASK.astype(np.int16))
+                _bar.update(subtitle="Saving Mask")
         return mo.md(
-            '## `segy` Saved to npz:\ndata save in {:.1f} min'.format(
-                (time.time() - t0_4) / 60)
+            "## `segy` Saved to npz: data save in {:.1f} min".format(
+                (time.time() - t0_4) / 60
+            )
         ).center()
-
-    save_value = 0
-    run_button = mo.ui.run_button(label="Save `.npz`")
-    run_button.center()
-    return run_button, save_on_click
+    return (save_on_click,)
 
 
 @app.cell
+def _(mo):
+    save_value = 0
+    run_button = mo.ui.run_button(label="Save `.npz`")
+    run_button.center()
+    return (run_button,)
+
+
+@app.cell(hide_code=True)
 def _(mo, run_button, save_on_click):
     if run_button.value:
         _a = save_on_click(save_mask=True)
@@ -466,10 +481,7 @@ def _():
 
 @app.cell(column=1)
 def _():
-    from io import BytesIO, StringIO
-    import pandas as pd
-
-    return BytesIO, pd
+    return
 
 
 @app.cell
@@ -479,20 +491,8 @@ def _(mo):
 
 
 @app.cell
-def _(BytesIO):
-    from matplotlib import colors
-    import matplotlib.patches as pltPatches
-    import matplotlib.path as pltPath
-    from itertools import cycle
-
-    def save_fig_buf(f):
-            buf = BytesIO()
-            f.savefig(buf, format="png")
-            return buf
-
-    def save_tex_buf(string):
-        return string.encode("utf-8")
-    return cycle, pltPatches, pltPath, save_fig_buf, save_tex_buf
+def _():
+    return
 
 
 @app.cell(hide_code=True)
@@ -686,6 +686,7 @@ def _(
     line_colors_stats,
     mo,
     patches_stdr,
+    plt,
     save_fig_buf,
     table_stat_stdr,
 ):
@@ -701,7 +702,7 @@ def _(
                             linewidth=1,
                             label=f"${_s['Statistic'].title()}={_s['Value']:.3f}$")
             _fig_file_name += [_s['Statistic']]
-        ax_stat_stdr.legend(ncols=n_stats_to_plot_stdr//2, bbox_to_anchor =(0.5,-0.37), loc='lower center')
+        ax_stat_stdr.legend(ncols=1 + n_stats_to_plot_stdr//2, bbox_to_anchor =(0.5,-0.35), loc='lower center')
         _title = "Histogram of Seismic Amplitude"
         ax_stat_stdr.set_ylabel("Frequency", fontstyle="italic")
         ax_stat_stdr.set_xlabel("Amplitude", fontstyle="italic")
@@ -710,6 +711,7 @@ def _(
 
     ax_stat_stdr.grid(which="both",alpha=0.25)
     ax_stat_stdr.autoscale_view()
+    plt.tight_layout()
     # fig_stat_stdr.suptitle(_title, fontsize=18, fontstyle="italic")
     _fig_file_name = "_".join(_fig_file_name)
     _download_lazy = mo.download(
@@ -732,7 +734,7 @@ def _(MASK, mo, n_ilines, n_xlines, np, nsample, seis_flatten_stdr_ori):
     return (run_button_stdr,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo, run_button_stdr, save_on_click):
     if run_button_stdr.value:
         _a = save_on_click(save_mask=True, suffix="_stdr")
