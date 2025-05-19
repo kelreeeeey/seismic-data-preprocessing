@@ -14,6 +14,7 @@ __pycache__/
 __marimo__/
 # layouts/
 run_marimo.sh
+*/run_marimo.sh
 
 # jupyter notebook
 *.ipynb
