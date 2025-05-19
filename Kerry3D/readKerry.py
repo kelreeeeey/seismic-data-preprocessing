@@ -38,7 +38,12 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(filename, time):
     t0=time.time()
-    segy = _read_segy(filename)
+    try:
+        segy = _read_segy(filename)
+    except FileNotFoundError:
+        import subprocess
+        subprocess.run(["wget", "http://s3.amazonaws.com/open.source.geoscience/open_data/newzealand/Taranaiki_Basin/Keri_3D/Kerry3D.segy"])
+        segy = _read_segy(filename)
     print('--> data read in {:.1f} sec'.format(time.time()-t0))
     return (segy,)
 
@@ -193,7 +198,7 @@ def _(mo):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(n_ilines, n_xlines, np, nsample, ntraces, stream, time):
     seis_np = np.zeros((n_ilines, n_xlines, nsample))
     t0_3 = time.time()
@@ -247,7 +252,7 @@ def _():
     return (seiscmap,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo, n_ilines, n_xlines):
     inline_full_num = mo.ui.number(start=510,
                                    stop=n_ilines+510,
