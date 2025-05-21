@@ -9,6 +9,8 @@ __pycache__/
 *.sgy
 *.npy
 *.npz
+*.zgy
+*.zgy*
 
 # marimo
 __marimo__/
