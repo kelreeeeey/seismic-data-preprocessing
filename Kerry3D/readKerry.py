@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.13.10"
+__generated_with = "0.13.11"
 app = marimo.App(width="columns", layout_file="layouts/readKerry.grid.json")
 
 
@@ -34,7 +34,7 @@ def _(Path):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""# 3D Seismic Kerry Data Gathering & Preprocessing""").center()
+    mo.md(r"""# 3D Seismic Kerry Data Gathering & Preprocessing""")#.center()
     return
 
 
@@ -298,7 +298,23 @@ def _():
 
 
 @app.cell
-def _(IL_END, IL_START, XL_END, XL_START, Z_END, Z_START, mo, sample_rate):
+def _(mo):
+    run_boundary_from = mo.ui.run_button(label="Reset!")
+    return (run_boundary_from,)
+
+
+@app.cell
+def _(
+    IL_END,
+    IL_START,
+    XL_END,
+    XL_START,
+    Z_END,
+    Z_START,
+    mo,
+    run_boundary_from,
+    sample_rate,
+):
     boundary_form = mo.md("""
     | Boundary  | Start | Stop  |
     | :-------: | :---: | :--:  |
@@ -313,13 +329,28 @@ def _(IL_END, IL_START, XL_END, XL_START, Z_END, Z_START, mo, sample_rate):
         z1 = mo.ui.number(start=Z_START,  stop=Z_END,  step=sample_rate, label="", value=25*4),
         z2 = mo.ui.number(start=Z_START,  stop=Z_END,  step=sample_rate, label="", value=(272 + 25) * 4),
     ).form()
-    boundary_form
+    if run_boundary_from.value:
+        boundary_form = mo.md("""
+    | Boundary  | Start | Stop  |
+    | :-------: | :---: | :--:  |
+    | CROSSLINE | {xl1} | {xl2} |
+    | INLINE    | {il1} | {il2} |
+    | DEPTH     | {z1}  | {z2}  |
+    """).center().batch(
+            xl1 = mo.ui.number(start=XL_START, stop=XL_END, step=1, label="", value=45 + 510),
+            xl2 = mo.ui.number(start=XL_START, stop=XL_END, step=1, label="", value=45 + 510 + 608),
+            il1 = mo.ui.number(start=IL_START, stop=IL_END, step=1, label="", value=73,),
+            il2 = mo.ui.number(start=IL_START, stop=IL_END, step=1, label="", value=73 + 192,),
+            z1 = mo.ui.number(start=Z_START,  stop=Z_END,  step=sample_rate, label="", value=25*4),
+            z2 = mo.ui.number(start=Z_START,  stop=Z_END,  step=sample_rate, label="", value=(272 + 25) * 4),
+        ).form()
+    mo.vstack([run_boundary_from, boundary_form])
     return (boundary_form,)
 
 
 @app.cell
-def _(boundary_form):
-    boundary_form.value
+def _():
+    # boundary_form.value
     return
 
 
@@ -413,7 +444,7 @@ def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
             #     np.arange(0, dims[1], _n),
             #     np.arange(dim_start[1], dims[1]+dim_start[1], _n),
             #     rotation=90)
-        
+
             _axR = _ax.secondary_yaxis('right')
             _axR.set_yticks(
                 np.arange(0, dims[2], _n),
@@ -486,7 +517,7 @@ def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
             _ax.set_ylabel("TWT (s)", fontsize=15)
             _ax.set_xlabel("INLINE", labelpad=10, fontsize=15)
 
-        
+
             _ax.set_xticks(
                 np.arange(0, dims[0], _n),
                 np.arange(dim_start[0], dims[0]+dim_start[0], _n),
@@ -507,18 +538,18 @@ def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
                 np.arange(0, dims[2], _n),
                 np.arange(0, dims[2]*4, _n*4)/1000,
                 rotation=0)
-        
+
             _ax.set_title(f"$CROSSLINE\ {_d}$", fontsize=20, style="italic", pad=10)
             _ax.axvline(vertidxs[0], color="red", label=f"INLINE {vertbuttons[0]}")
             _ax.axvline(vertidxs[1], color="red", linestyle="--", label=f"INLINE {vertbuttons[1]}")
             _ax.axhline(horidxs[0], color="black", label=f"TWT {horbuttons[0]} ms")
             _ax.axhline(horidxs[1], color="black", linestyle="--", label=f"TWT {horbuttons[1]} ms")
             _ax.grid(which="both", color="black", alpha=0.25, markevery=2, snap=True)
-        
+
         _handles, _labels = ax_xline[1].get_legend_handles_labels()
         fig_xline.legend(_handles, _labels, ncols=4, loc='lower center', bbox_to_anchor =(0.5,-0.05))
 
-        _fig_file_name = ["KerryOriginal", 
+        _fig_file_name = [title, 
                           "XL", str(buttons[0])     + "-" + str(buttons[1]),
                           "IL", str(vertbuttons[0]) + "-" + str(vertbuttons[1]),
                           "TWT", str(horbuttons[0]) + "-" + str(horbuttons[1])
@@ -573,7 +604,7 @@ def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
         for _ax, _d in zip(ax_depth, buttons):
             _ax.set_xlabel("INLINE", fontsize=15)
             _ax.set_ylabel("CROSSLINE", fontsize=15)
-        
+
             _ax.set_xticks(
                 np.arange(0, dims[0], _n),
                 np.arange(dim_start[0], dims[0]+dim_start[0], _n),
@@ -582,7 +613,7 @@ def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
                 np.arange(0, dims[1], _n),
                 np.arange(dim_start[1], dims[1]+dim_start[1], _n),
                 rotation=0)
-        
+
             _axR = _ax.secondary_yaxis('right')
             _axT = _ax.secondary_xaxis('top')    
 
@@ -1090,7 +1121,7 @@ def _(
                         dim_start   = (58, 510, 0),
                         title = "KerryOriginal",)]),
         mo.vstack([
-            mo.md("## Cropped").center(),
+            mo.md("## Masked").center(),
             plot_ilines(data = masked_crop_data,
                         buttons     = (inline_full_num.value, inline_full_num_2.value),
                         vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
@@ -1100,7 +1131,7 @@ def _(
                         horidxs     = (z_idx, z_idx_2),
                         dim_start   = (58, 510, 0),
                         idxs = (il_idx, il_idx_2-1),
-                        title = "KerryCropped",
+                        title = "KerryMasked",
                         # minmax = dict(vmin=-1, vmax=1)
                        )])
     ])
@@ -1134,26 +1165,26 @@ def _(
             mo.md("## Original").center(),
             plot_xlines(data=seis_np,
                         idxs=(xl_idx, xl_idx_2),
-                        buttons     = (depth_full_num.value,  depth_full_num_2.value),
-                        vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
-                        horbuttons  = (inline_full_num.value, inline_full_num_2.value),
+                        horbuttons  = (depth_full_num.value,  depth_full_num_2.value),
+                        buttons     = (xline_full_num.value,  xline_full_num_2.value),
+                        vertbuttons = (inline_full_num.value, inline_full_num_2.value),
                         dims        = (n_ilines, n_xlines, nsample),
                         vertidxs    = (il_idx, il_idx_2),
                         horidxs     = (z_idx, z_idx_2),
                         dim_start   = (58, 510, 0),                    
                         title = "KerryOriginal",)]),
         mo.vstack([
-            mo.md("## Cropped").center(),
+            mo.md("## Masked").center(),
             plot_xlines(data = masked_crop_data,
                         idxs = (xl_idx, xl_idx_2-1),
-                        buttons     = (depth_full_num.value,  depth_full_num_2.value),
-                        vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
-                        horbuttons  = (inline_full_num.value, inline_full_num_2.value),
+                        horbuttons  = (depth_full_num.value,  depth_full_num_2.value),
+                        buttons     = (xline_full_num.value,  xline_full_num_2.value),
+                        vertbuttons = (inline_full_num.value, inline_full_num_2.value),
                         dims        = (n_ilines, n_xlines, nsample),
                         vertidxs    = (il_idx, il_idx_2),
                         horidxs     = (z_idx, z_idx_2),
                         dim_start   = (58, 510, 0),                    
-                        title       = "KerryCropped",
+                        title       = "KerryMasked",
                         # minmax       = dict(vmin=-1, vmax=1) 
                        )])
     ])
@@ -1303,7 +1334,7 @@ def _(
                 title       = "KerryOriginal",
             )]),
         mo.vstack([
-            mo.md("## Cropped").center(),
+            mo.md("## Masked").center(),
             plot_timedepths(
                 data = masked_crop_data,
                 idxs = (z_idx, z_idx_2-1),
@@ -1314,7 +1345,7 @@ def _(
                 horidxs     = (il_idx, il_idx_2),
                 dims        = (n_ilines, n_xlines, nsample),
                 dim_start   = (58, 510, 0),
-                title = "KerryCropped", 
+                title = "KerryMasked", 
                 # minmax = {"vmin":-1, "vmax":1},
             )])
     ])
@@ -1666,7 +1697,7 @@ def _(
                         xline_full_crp.value + 0,
                         (depth_full_crp.value) + 0,
                     ),
-                    title = "KerryCropped",)
+                    title = "KerryCropped2",)
     ])
     return
 
@@ -1705,7 +1736,7 @@ def _(
                         xline_full_crp.value + 0,
                         (depth_full_crp.value) + 0,
                     ),
-                    title = "KerryCropped",)
+                    title = "KerryCropped2",)
     ])
     return
 
@@ -1745,8 +1776,13 @@ def _(
                         xline_full_crp.value + 0,
                         (depth_full_crp.value) + 0,
             ),
-            title = "KerryCropped",)
+            title = "KerryCropped2",)
     ])
+    return
+
+
+@app.cell
+def _():
     return
 
 
