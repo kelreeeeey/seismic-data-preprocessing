@@ -34,11 +34,11 @@ def _(Path):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""# Reading the Header Infromations""").center()
+    mo.md(r"""# 3D Seismic Kerry Data Gathering & Preprocessing""").center()
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(filename, kerry_url, mo, read):
     if filename.exists():
         _ntask = 2
@@ -185,7 +185,7 @@ def _(mo, np, stream):
     il = []
     xl = []
     n_ilines = 0
-    n_Xlines = 0
+    n_xlines = 0
     with Bar_collecting_il_xl as _bar:
         for i_3 in range(n_stream-1):
             _bar.update(subtitle=f"Collecting from stream-{i_3}")
@@ -201,7 +201,7 @@ def _(mo, np, stream):
     return n_ilines, n_xlines
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo, n_ilines, n_xlines, np, nsample, ntraces, stream):
     # streaming traces
     Bar_collecting_trace = mo.status.progress_bar(
@@ -252,7 +252,7 @@ def _(mo, n_ilines, n_xlines, np, nsample, ntraces, stream):
     )
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _():
     from seiscm import seismic as seiscmap
     from io import BytesIO, StringIO
@@ -261,52 +261,115 @@ def _():
     import matplotlib.patches as pltPatches
     import matplotlib.path as pltPath
     from itertools import cycle
+    return BytesIO, cycle, pd, pltPatches, pltPath, seiscmap
 
+
+@app.cell
+def _(BytesIO, plt):
     def save_fig_buf(f):
             buf = BytesIO()
-            f.savefig(buf, format="png")
+            plt.gcf()
+            plt.savefig(buf, bbox_inches='tight', format="png")
             return buf
 
     def save_tex_buf(string):
         return string.encode("utf-8")
-    return cycle, pd, pltPatches, pltPath, save_fig_buf, save_tex_buf, seiscmap
+    return save_fig_buf, save_tex_buf
 
 
-@app.cell(hide_code=True)
-def _(mo, n_ilines, n_xlines):
-    inline_full_num = mo.ui.number(start=510,
-                                   stop=n_ilines+510,
-                                   step=1, label="INLINE NUMBER",
-                                   value=143+510)
-    xline_full_num = mo.ui.number(start=58,
-                                  stop=n_xlines+58,
-                                  step=1, label="CROSSLINE NUMBER",
-                                  value=100+58,)
-    depth_full_num = mo.ui.number(start=0,
-                                  stop=5000,
-                                  step=4, label="TIME SLICE",
-                                  value=120*4)
-    return depth_full_num, inline_full_num, xline_full_num
+@app.cell
+def _(n_ilines, n_xlines, nsample):
+    n_ilines, n_xlines, nsample
+    return
+
+
+@app.cell
+def _(n_ilines, n_xlines, nsample):
+    sample_rate = 4
+    IL_START = 58
+    XL_START = 510
+    Z_START  = 0 * sample_rate
+
+    IL_END = n_ilines + IL_START
+    XL_END = n_xlines + XL_START
+    Z_END  = nsample  * sample_rate
+    return IL_END, IL_START, XL_END, XL_START, Z_END, Z_START, sample_rate
+
+
+@app.cell
+def _(IL_END, IL_START, XL_END, XL_START, Z_END, Z_START, mo, sample_rate):
+    xline_full_num  = mo.ui.number(start=XL_START, stop=XL_END, step=1, label="CROSSLINE NUMBER", value=610)
+    inline_full_num = mo.ui.number(start=IL_START, stop=IL_END, step=1, label="INLINE NUMBER", value=76,)
+    depth_full_num  = mo.ui.number(start=Z_START,  stop=Z_END,  step=sample_rate, label="TIME SLICE", value=120*4)
+
+
+    xline_full_num_2 = mo.ui.number(start=XL_START, stop=XL_END, step=1, label="CROSSLINE NUMBER", value=1200)
+    inline_full_num_2 = mo.ui.number(start=IL_START, stop=IL_END, step=1, label="INLINE NUMBER", value=270,)
+    depth_full_num_2 = mo.ui.number(start=Z_START,  stop=Z_END,  step=sample_rate, label="TIME SLICE", value=2000)
+    return (
+        depth_full_num,
+        depth_full_num_2,
+        inline_full_num,
+        inline_full_num_2,
+        xline_full_num,
+        xline_full_num_2,
+    )
 
 
 @app.cell
 def _(depth_full_num, inline_full_num, mo, xline_full_num):
-    mo.hstack([
-        inline_full_num, depth_full_num, xline_full_num])
+    mo.vstack([mo.md("### Boundary 1").center(),
+               mo.hstack([inline_full_num, depth_full_num, xline_full_num])])
     return
 
 
 @app.cell
-def _(SEIS_MAX, SEIS_MIN):
-    vminmax = dict(vmax=SEIS_MAX, vmin=SEIS_MIN)
-    return (vminmax,)
+def _(depth_full_num_2, inline_full_num_2, mo, xline_full_num_2):
+    mo.vstack([mo.md("### Boundary 2").center(),
+               mo.hstack([inline_full_num_2, depth_full_num_2, xline_full_num_2])])
+    return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(
-    fig_stat,
+    IL_START,
+    SEIS_MAX,
+    SEIS_MIN,
+    XL_START,
+    Z_START,
+    depth_full_num,
+    depth_full_num_2,
     inline_full_num,
+    inline_full_num_2,
+    xline_full_num,
+    xline_full_num_2,
+):
+    vminmax = dict(vmax=SEIS_MAX, vmin=SEIS_MIN)
+
+
+    il_idx = inline_full_num.value-IL_START
+    xl_idx = xline_full_num.value-XL_START
+    z_idx = (depth_full_num.value - Z_START) // 4
+
+    il_idx_2 = inline_full_num_2.value-IL_START
+    xl_idx_2 = xline_full_num_2.value-XL_START
+    z_idx_2 = (depth_full_num_2.value - Z_START) // 4
+    return il_idx, il_idx_2, vminmax, xl_idx, xl_idx_2, z_idx, z_idx_2
+
+
+@app.cell
+def _(
+    IL_START,
+    XL_START,
+    Z_START,
+    depth_full_num,
+    depth_full_num_2,
+    il_idx,
+    il_idx_2,
+    inline_full_num,
+    inline_full_num_2,
     mo,
+    n_ilines,
     n_xlines,
     np,
     nsample,
@@ -315,128 +378,319 @@ def _(
     seis_np,
     seiscmap,
     vminmax,
-):
-    plt.figure(figsize=(6,7))
-    _idx = inline_full_num.value-510
-    # inline 653 plot as: https://wiki.seg.org/wiki/Kerry-3D
-    plt.imshow(seis_np[_idx].transpose(), seiscmap(), aspect="auto", **vminmax)
-    _n = 50
-    plt.ylabel("TWT (s)", fontsize=15)
-    plt.xlabel("CROSSLINE", fontsize=15, labelpad=10)
-    plt.xticks(
-        np.arange(0, n_xlines, _n),
-        np.arange(58, n_xlines+58, _n),
-        rotation=90)
-    plt.yticks(
-        np.arange(0, nsample, _n*5),
-        np.arange(0, nsample*4, _n*4*5)/1000,
-        rotation=0)
-    plt.title(f"INLINE Section {inline_full_num.value}", fontsize=20)
-
-    _fig_file_name = ["KerryOriginal", "IL", str(inline_full_num.value)]
-    _fig_file_name = "_".join(_fig_file_name)
-    _download_lazy = mo.download(
-        data = save_fig_buf(f=fig_stat),
-        filename = _fig_file_name,
-        label = _fig_file_name
-    )
-    mo.vstack([mo.as_html(plt.gca()).center(), _download_lazy.center()]).center()
-    return
-
-
-@app.cell(hide_code=True)
-def _(
-    fig_stat,
-    mo,
-    n_ilines,
-    np,
-    nsample,
-    plt,
-    save_fig_buf,
-    seis_np,
-    seiscmap,
-    vminmax,
+    xl_idx,
+    xl_idx_2,
     xline_full_num,
+    xline_full_num_2,
+    z_idx,
+    z_idx_2,
 ):
-    plt.figure(figsize=(6,7))
-    _idx = xline_full_num.value-58
-    _n = 50
-    plt.imshow(seis_np[:,_idx,:].transpose(), seiscmap(), aspect="auto", **vminmax)
-    plt.ylabel("TWT (s)", fontsize=15)
-    plt.xlabel("INLINE", labelpad=10, fontsize=15)
-    plt.xticks(
-        np.arange(0, n_ilines, _n),
-        np.arange(510, n_ilines+510, _n),
-        rotation=90)
-    plt.yticks(
-        np.arange(0, nsample, _n*5),
-        np.arange(0, nsample*4, _n*4*5)/1000,
-        rotation=0)
-    plt.title(f"CROSSLINE Section {xline_full_num.value}", fontsize=20)
-    _fig_file_name = ["KerryOriginal", "XL", str(xline_full_num.value)]
-    _fig_file_name = "_".join(_fig_file_name)
-    _download_lazy = mo.download(
-        data = save_fig_buf(f=fig_stat),
-        filename = _fig_file_name,
-        label = _fig_file_name
-    )
-    mo.vstack([mo.as_html(plt.gca()).center(), _download_lazy.center()]).center()
-    return
+    def plot_ilines(
+        data=seis_np,
+        idxs=(il_idx, il_idx_2),
+        buttons     = (inline_full_num.value, inline_full_num_2.value),
+        vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
+        horbuttons  = (depth_full_num.value,  depth_full_num_2.value),
+        dims        = (n_ilines, n_xlines, nsample),
+        dim_start   = (IL_START, XL_START, Z_START),
+        title       = "KerryOriginal",
+    ) -> mo.Html:
+        fig_iline, ax_iline = plt.subplots(1,2, figsize=(10,7), sharey=False, layout="compressed")
+        ax_iline[0].imshow(data[idxs[0], :, :].transpose(), seiscmap(), aspect="auto", **vminmax)
+        ax_iline[1].imshow(data[idxs[1], :, :].transpose(), seiscmap(), aspect="auto", **vminmax)
+        _n = 50
+        for _ax, _d in zip(ax_iline, buttons):
+            _ax.set_ylabel("TWT (s)", fontsize=15)
+            _ax.set_xlabel("CROSSLINE", fontsize=15, labelpad=10)
+            _ax.set_xticks(
+                np.arange(0, dims[1], _n),
+                np.arange(dim_start[1], dims[1]+dim_start[1], _n),
+                rotation=90)
+            _ax.set_yticks(
+                np.arange(0, dims[2], _n*5),
+                np.arange(0, dims[2]*4, _n*4*5)/1000,
+                rotation=0)
+            _ax.set_title(f"$INLINE\ {_d}$", style="italic", fontsize=20)
+            _ax.axvline(xl_idx, color="blue", label=f"CROSSLINE {vertbuttons[0]}")
+            _ax.axvline(xl_idx_2, color="blue", linestyle="--", label=f"CROSSLINE {vertbuttons[1]}")
+            _ax.axhline(z_idx, color="black", label=f"TWT {horbuttons[0]} ms")
+            _ax.axhline(z_idx_2, color="black", linestyle="--", label=f"TWT {horbuttons[1]} ms")
+        
+        _handles, _labels = ax_iline[1].get_legend_handles_labels()
+        fig_iline.legend(_handles, _labels, ncols=4, loc='lower center', bbox_to_anchor =(0.5,-0.075))
+    
+        _fig_file_name = [title,
+                          "IL", str(buttons[0])     + "-" + str(buttons[1]),
+                          "XL", str(vertbuttons[0]) + "-" + str(vertbuttons[1]),
+                          "TWT", str(horbuttons[0]) + "-" + str(horbuttons[1])
+                         ]
+        _fig_file_name = "_".join(_fig_file_name)
+        _download_lazy = mo.download(
+            data = save_fig_buf(plt.gcf()),
+            filename = _fig_file_name,
+            label = _fig_file_name
+        )
+        return mo.vstack([mo.as_html(plt.gcf()).center(), _download_lazy.center()]).center()
+
+    return (plot_ilines,)
 
 
-@app.cell(hide_code=True)
-def _():
-    return
-
-
-@app.cell(hide_code=True)
+@app.cell
 def _(
     depth_full_num,
-    fig_stat,
+    depth_full_num_2,
+    il_idx,
+    il_idx_2,
     inline_full_num,
+    inline_full_num_2,
+    n_ilines,
+    n_xlines,
+    nsample,
+    plot_ilines,
+    seis_np,
+    xline_full_num,
+    xline_full_num_2,
+):
+    plot_ilines(
+        data=seis_np,
+        idxs=(il_idx, il_idx_2),
+        buttons     = (inline_full_num.value, inline_full_num_2.value),
+        vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
+        horbuttons  = (depth_full_num.value,  depth_full_num_2.value),
+        dims        = (n_ilines, n_xlines, nsample),
+        dim_start   = (58, 510, 0),
+        title       = "KerryOriginal",)
+    return
+
+
+@app.cell
+def _(
+    IL_START,
+    XL_START,
+    Z_START,
+    depth_full_num,
+    depth_full_num_2,
+    il_idx,
+    il_idx_2,
+    inline_full_num,
+    inline_full_num_2,
     mo,
     n_ilines,
     n_xlines,
     np,
+    nsample,
     plt,
     save_fig_buf,
     seis_np,
     seiscmap,
     vminmax,
+    xl_idx,
+    xl_idx_2,
+    xline_full_num,
+    xline_full_num_2,
+    z_idx,
+    z_idx_2,
 ):
-    plt.figure(figsize=(10,8))
-    _idx = depth_full_num.value // 4
-    plt.imshow(seis_np[:,:,_idx], seiscmap(), aspect="equal", origin='upper', **vminmax)
-    _n = 50
-    plt.ylabel("INLINE", fontsize=15)
-    plt.xlabel("CROSSLINE", fontsize=15)
-    plt.yticks(
-        np.arange(0, n_ilines, _n),
-        np.arange(58, n_ilines+58, _n),
-        rotation=90)
-    plt.xticks(
-        np.arange(0, n_xlines, _n),
-        np.arange(510, n_xlines+510, _n),
-        rotation=0)
-    plt.title(f"TIME SLICE {depth_full_num.value} ms")
-    # mo.vstack([
-    #     mo.md(f"## $\\texttt{{TIME SLICE}}$ {depth_full_num.value} ms").center(),
-    #     mo.as_html(plt.gca()) ])
+    def plot_xlines(
+        data        = seis_np,
+        idxs        = (xl_idx, xl_idx_2),
+        buttons     = (xline_full_num.value,  xline_full_num_2.value),
+        vertbuttons = (inline_full_num.value, inline_full_num_2.value),
+        horbuttons  = (depth_full_num.value,  depth_full_num_2.value),
+        dims        = (n_ilines, n_xlines, nsample),
+        dim_start   = (IL_START, XL_START, Z_START),
+        title       = "KerryOriginal",
+    ) -> mo.Html:
+        fig_xline, ax_xline = plt.subplots(1,2, figsize=(10,7), sharey=False, layout="compressed")
+        _n = 50
+        ax_xline[0].imshow(data[:,idxs[0],:].transpose(), seiscmap(), aspect="auto", **vminmax)
+        ax_xline[1].imshow(data[:,idxs[1],:].transpose(), seiscmap(), aspect="auto", **vminmax)
+    
+        for _ax, _d in zip(ax_xline, buttons):
+            _ax.set_ylabel("TWT (s)", fontsize=15)
+            _ax.set_xlabel("INLINE", labelpad=10, fontsize=15)
+            _ax.set_xticks(
+                np.arange(0, dims[0], _n),
+                np.arange(dim_start[0], dims[0]+dim_start[0], _n),
+                rotation=90)
+            _ax.set_yticks(
+                np.arange(0, dims[2], _n*5),
+                np.arange(0, dims[2]*4, _n*4*5)/1000,
+                rotation=0)
+            _ax.set_title(f"$CROSSLINE\ {_d}$", fontsize=20, style="italic")
+            _ax.axvline(il_idx, color="red", label=f"INLINE {vertbuttons[0]}")
+            _ax.axvline(il_idx_2, color="red", linestyle="--", label=f"INLINE {vertbuttons[1]}")
+            _ax.axhline(z_idx, color="black", label=f"TWT {horbuttons[0]} ms")
+            _ax.axhline(z_idx_2, color="black", linestyle="--", label=f"TWT {horbuttons[1]} ms")
+        _handles, _labels = ax_xline[1].get_legend_handles_labels()
+        fig_xline.legend(_handles, _labels, ncols=4, loc='lower center', bbox_to_anchor =(0.5,-0.05))
 
-    _fig_file_name = ["KerryOriginal", "Z", str(inline_full_num.value)]
-    _fig_file_name = "_".join(_fig_file_name)
-    _download_lazy = mo.download(
-        data = save_fig_buf(f=fig_stat),
-        filename = _fig_file_name,
-        label = _fig_file_name
+        _fig_file_name = ["KerryOriginal", 
+                          "XL", str(buttons[0])     + "-" + str(buttons[1]),
+                          "IL", str(vertbuttons[0]) + "-" + str(vertbuttons[1]),
+                          "TWT", str(horbuttons[0]) + "-" + str(horbuttons[1])
+                         ]
+        _fig_file_name = "_".join(_fig_file_name)
+        _download_lazy = mo.download(
+            data = save_fig_buf(f=fig_xline),
+            filename = _fig_file_name,
+            label = _fig_file_name
+        )
+        return mo.vstack([mo.as_html(plt.gcf()).center(), _download_lazy.center()]).center()
+
+    return (plot_xlines,)
+
+
+@app.cell
+def _(
+    depth_full_num,
+    depth_full_num_2,
+    inline_full_num,
+    inline_full_num_2,
+    n_ilines,
+    n_xlines,
+    nsample,
+    plot_xlines,
+    seis_np,
+    xl_idx,
+    xl_idx_2,
+    xline_full_num,
+    xline_full_num_2,
+):
+    plot_xlines(
+        data=seis_np,
+        idxs=(xl_idx, xl_idx_2),
+        buttons     = (xline_full_num.value,  xline_full_num_2.value),
+        vertbuttons = (inline_full_num.value, inline_full_num_2.value),
+        horbuttons  = (depth_full_num.value,  depth_full_num_2.value),
+        dims        = (n_ilines, n_xlines, nsample),
+        dim_start   = (58, 510, 0),
+        title       = "KerryOriginal",
     )
-    mo.vstack([mo.as_html(plt.gca()).center(), _download_lazy.center()]).center()
     return
 
 
 @app.cell
+def _(
+    IL_START,
+    XL_START,
+    Z_START,
+    depth_full_num,
+    depth_full_num_2,
+    il_idx,
+    il_idx_2,
+    inline_full_num,
+    inline_full_num_2,
+    mo,
+    n_ilines,
+    n_xlines,
+    np,
+    nsample,
+    plt,
+    save_fig_buf,
+    seis_np,
+    seiscmap,
+    vminmax,
+    xl_idx,
+    xl_idx_2,
+    xline_full_num,
+    xline_full_num_2,
+    z_idx,
+    z_idx_2,
+):
+    def plot_timedepths(
+        data=seis_np,
+        idxs=(z_idx, z_idx_2),
+        buttons     = (depth_full_num.value,  depth_full_num_2.value),
+        vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
+        horbuttons  = (inline_full_num.value, inline_full_num_2.value),
+        dims        = (n_ilines, n_xlines, nsample),
+        dim_start   = (IL_START, XL_START, Z_START),
+        title       = "KerryOriginal",
+    ) -> mo.Html:
+        fig_depth, ax_depth = plt.subplots(1,2, figsize=(10,10), sharey=False, layout="compressed")
+        ax_depth[0].imshow(data[:,:,idxs[0]].T, seiscmap(), aspect="equal", origin='upper', **vminmax)
+        ax_depth[1].imshow(data[:,:,idxs[1]].T, seiscmap(), aspect="equal", origin='upper', **vminmax)
+        _n = 50
+        for _ax, _d in zip(ax_depth, buttons):
+            _ax.set_xlabel("INLINE", fontsize=15)
+            _ax.set_ylabel("CROSSLINE", fontsize=15)
+            _ax.set_xticks(
+                np.arange(0, dims[0], _n),
+                np.arange(dim_start[0], dims[0]+dim_start[0], _n),
+                rotation=90)
+            _ax.set_yticks(
+                np.arange(0, dims[1], _n),
+                np.arange(dim_start[1], dims[1]+dim_start[1], _n),
+                rotation=90)
+    
+            _ax.axhline(xl_idx, color="blue", label=f"CROSSLINE {vertbuttons[0]}")
+            _ax.axhline(xl_idx_2, color="blue", linestyle="--", label=f"CROSSLINE {vertbuttons[1]}")
+            _ax.axvline(il_idx, color="red", label=f"INLINE {horbuttons[0]}")
+            _ax.axvline(il_idx_2, color="red", linestyle="--", label=f"INLINE {horbuttons[1]}")
+            _ax.set_title(f"$TIME\ SLICE\ {_d} ms$", style="italic")
+        
+        _handles, _labels = ax_depth[1].get_legend_handles_labels()
+        fig_depth.legend(_handles, _labels, ncols=4, loc='lower center', bbox_to_anchor =(0.5,-0.05))
+        _fig_file_name = [title,
+                          "TWT", str(buttons[0])     + "-" + str(buttons[1]),
+                          "XL", str(vertbuttons[0]) + "-" + str(vertbuttons[1]),
+                          "IL", str(horbuttons[0]) + "-" + str(horbuttons[1])
+                         ]
+        _fig_file_name = "_".join(_fig_file_name)
+        # plt.show(
+    
+        _download_lazy = mo.download(
+            data = save_fig_buf(plt.gcf()),
+            filename = _fig_file_name,
+            label = _fig_file_name
+        )
+        return mo.vstack([mo.as_html(plt.gcf()).center(), _download_lazy.center()]).center()
+    return (plot_timedepths,)
+
+
+@app.cell
+def _(
+    depth_full_num,
+    depth_full_num_2,
+    inline_full_num,
+    inline_full_num_2,
+    n_ilines,
+    n_xlines,
+    nsample,
+    plot_timedepths,
+    seis_np,
+    xline_full_num,
+    xline_full_num_2,
+    z_idx,
+    z_idx_2,
+):
+    plot_timedepths(
+        data        = seis_np,
+        idxs        = (z_idx, z_idx_2),
+        buttons     = (depth_full_num.value,  depth_full_num_2.value),
+        vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
+        horbuttons  = (inline_full_num.value, inline_full_num_2.value),
+        dims        = (n_ilines, n_xlines, nsample),
+        dim_start   = (58, 510, 0),
+        title       = "KerryOriginal",
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(il_idx, xl_idx, z_idx):
+    print("XL idx: {}, IL idx {}, TIME idx {}".format(
+        xl_idx,
+        il_idx,
+        z_idx
+    ))
+    return
+
+
+@app.cell(hide_code=True)
 def _(MASK, filedir, mo, np, seis_np, time):
-    def save_on_click(data=seis_np, suffix="", save_mask=False):
+    def save_on_click(data=seis_np, suffix="", save_mask=False, mask=MASK):
         t0_4 = time.time()
         with mo.status.progress_bar(
             total=2 if save_mask else 1,
@@ -446,7 +700,7 @@ def _(MASK, filedir, mo, np, seis_np, time):
             _bar.update(subtitle="Saving Data")
             np.savez(filedir / f"kerry3d{suffix}", data)
             if save_mask:
-                np.savez(filedir / "kerry3d_mask", MASK.astype(np.int16))
+                np.savez(filedir / f"kerry3d_mask{suffix}", mask.astype(np.int16))
                 _bar.update(subtitle="Saving Mask")
         return mo.md(
             "## `segy` Saved to npz: data save in {:.1f} min".format(
@@ -458,40 +712,32 @@ def _(MASK, filedir, mo, np, seis_np, time):
 
 @app.cell
 def _(mo):
-    save_value = 0
     run_button = mo.ui.run_button(label="Save `.npz`")
-    run_button.center()
+    # run_button.center()
     return (run_button,)
 
 
 @app.cell(hide_code=True)
 def _(mo, run_button, save_on_click):
     if run_button.value:
-        _a = save_on_click(save_mask=True)
+        BUTTON_1 = save_on_click(save_mask=True)
     else:
-        _a = mo.md("### click button to save!").center()
-    _a
-    return
+        BUTTON_1 = mo.md("### Save Original Data!").center()
+    return (BUTTON_1,)
 
 
 @app.cell
-def _():
+def _(BUTTON_1, mo, run_button):
+    mo.vstack([
+        BUTTON_1,
+        run_button.center(),
+    ])
     return
 
 
 @app.cell(column=1)
 def _():
-    return
-
-
-@app.cell
-def _(mo):
-    mo.md(r"""# Data Preprocessing """).center()
-    return
-
-
-@app.cell
-def _():
+    from matplotlib.ticker import ScalarFormatter
     return
 
 
@@ -500,6 +746,12 @@ def _(mo):
     hist_binsize = mo.ui.number(start=10, stop=500, step=5, value=100, label="Histogram BinSize")
 
     return (hist_binsize,)
+
+
+@app.cell
+def _(hist_binsize, mo):
+    mo.vstack([mo.md(r"""# Data Preprocessing """).center(), hist_binsize.center()])
+    return
 
 
 @app.cell
@@ -521,23 +773,29 @@ def _(mo, pd, save_tex_buf, seis_stats):
         filename = _filename + ".tex",
         label=_filename + ".tex"
     )
-    mo.vstack([
-        _download_lazy.center(),
-        mo.ui.text_area(_latex_tabel, full_width=True, max_length=100),
-    ])
-    return
+
+    ori_latex = [
+        mo.hstack([mo.md(r"""## Original""").center(),
+        _download_lazy.center()]),
+        mo.ui.text_area(_latex_tabel, rows=10, full_width=True, max_length=100),
+    ]
+    return (ori_latex,)
 
 
 @app.cell(hide_code=True)
-def _(mo, seis_stats):
+def _(mo, ori_latex, seis_stats):
     table_stat = mo.ui.table(data=seis_stats, pagination=False)
-    table_stat
+    mo.vstack(
+        ori_latex + [
+            mo.md("Select Statistic Values to be plot!").center(),
+            table_stat
+        ]
+    )
     return (table_stat,)
 
 
 @app.cell(hide_code=True)
-def _(hist_binsize):
-    hist_binsize.center()
+def _():
     return
 
 
@@ -574,11 +832,14 @@ def _(hist_binsize, np, pltPatches, pltPath, seis_flatten):
 
 @app.cell(hide_code=True)
 def _(
+    SEIS_MAX,
+    SEIS_MIN,
     ax_stat,
     cycle,
     fig_stat,
     hist_binsize,
     mo,
+    np,
     patches,
     save_fig_buf,
     table_stat,
@@ -587,6 +848,7 @@ def _(
 
     n_stats_to_plot = len(table_stat.value)
     ax_stat.clear(); ax_stat.add_patch(patches)
+    _xlabel = np.linspace(SEIS_MIN-1, SEIS_MAX+1, 9)
     _fig_file_name = ["KerryOriginal", "hist", str(hist_binsize.value)]
 
     if n_stats_to_plot != 0:
@@ -596,7 +858,7 @@ def _(
                             linewidth=1,
                             label=f"${_s['Statistic'].title()}={_s['Value']:.3f}$")
             _fig_file_name += [_s['Statistic']]
-        ax_stat.legend(ncols=n_stats_to_plot//2, bbox_to_anchor =(0.5,-0.37), loc='lower center')
+        ax_stat.legend(ncols=1 + n_stats_to_plot//2, bbox_to_anchor =(0.5,-0.37), loc='lower center')
         _title = "Histogram of Seismic Amplitude"
         ax_stat.set_ylabel("Frequency", fontstyle="italic")
         ax_stat.set_xlabel("Amplitude", fontstyle="italic")
@@ -605,7 +867,7 @@ def _(
 
     ax_stat.grid(which="both",alpha=0.25)
     ax_stat.autoscale_view()
-    # fig_stat.suptitle(_title, fontsize=18, fontstyle="italic")
+    ax_stat.set_xticks(_xlabel)
     _fig_file_name = "_".join(_fig_file_name)
     _download_lazy = mo.download(
         data = save_fig_buf(f=fig_stat),
@@ -621,6 +883,47 @@ def _(
 def _(mo):
     mo.md(r"""## Standardization""").center()
     return
+
+
+@app.cell(hide_code=True)
+def _(mo, pd, save_tex_buf, seis_stats_stdr):
+    _df = pd.DataFrame(seis_stats_stdr)
+    _filename = "KerryStandardize_hist"
+    _latex_tabel = f"""\\begin{{tabel}}[ht!]
+    \\caption{{{_filename}}}
+    \\label{{tab:{_filename}}}
+    {_df.to_latex(index=False)}\\end{{tabel}}"""
+    _download_lazy = mo.download(
+        data = save_tex_buf(_latex_tabel),
+        filename = _filename + ".tex",
+        label=_filename + ".tex"
+    )
+
+    std_latex = [
+        mo.hstack([mo.md(r"""## Standardization""").center(),
+        _download_lazy.center()]),
+        mo.ui.text_area(_latex_tabel, rows=10, full_width=True, max_length=100),
+    ]
+    return (std_latex,)
+
+
+@app.cell
+def _(mo, seis_stats_stdr, std_latex):
+    table_stat_stdr = mo.ui.table(data=seis_stats_stdr, pagination=False)
+
+    mo.vstack(
+        std_latex + [
+            mo.md("Select Statistic Values to be plot!").center(),
+            table_stat_stdr
+        ]
+    )
+    return (table_stat_stdr,)
+
+
+@app.cell
+def _(plt):
+    fig_stat_stdr, ax_stat_stdr = plt.subplots(1,1, figsize=(7,5))
+    return ax_stat_stdr, fig_stat_stdr
 
 
 @app.cell
@@ -639,39 +942,6 @@ def _(SEIS_MEAN, SEIS_STD, np, seis_flatten_ori):
     return seis_flatten_stdr, seis_flatten_stdr_ori, seis_stats_stdr
 
 
-@app.cell(hide_code=True)
-def _(mo, pd, save_tex_buf, seis_stats_stdr):
-    _df = pd.DataFrame(seis_stats_stdr)
-    _filename = "KerryStandardize_hist"
-    _latex_tabel = f"""\\begin{{tabel}}[ht!]
-    \\caption{{{_filename}}}
-    \\label{{tab:{_filename}}}
-    {_df.to_latex(index=False)}\\end{{tabel}}"""
-    _download_lazy = mo.download(
-        data = save_tex_buf(_latex_tabel),
-        filename = _filename + ".tex",
-        label=_filename + ".tex"
-    )
-    mo.vstack([
-        _download_lazy.center(),
-        mo.ui.text_area(_latex_tabel, full_width=True, max_length=100),
-    ])
-    return
-
-
-@app.cell
-def _(mo, seis_stats_stdr):
-    table_stat_stdr = mo.ui.table(data=seis_stats_stdr, pagination=False)
-    table_stat_stdr
-    return (table_stat_stdr,)
-
-
-@app.cell
-def _(plt):
-    fig_stat_stdr, ax_stat_stdr = plt.subplots(1,1, figsize=(7,5))
-    return ax_stat_stdr, fig_stat_stdr
-
-
 @app.cell
 def _(make_histogram_seis, seis_flatten_stdr):
     N_stdr, bins_stdr, patches_stdr = make_histogram_seis(data=seis_flatten_stdr)
@@ -680,11 +950,14 @@ def _(make_histogram_seis, seis_flatten_stdr):
 
 @app.cell(hide_code=True)
 def _(
+    SEIS_MAX,
+    SEIS_MIN,
     ax_stat_stdr,
     fig_stat_stdr,
     hist_binsize,
     line_colors_stats,
     mo,
+    np,
     patches_stdr,
     plt,
     save_fig_buf,
@@ -695,6 +968,7 @@ def _(
     ax_stat_stdr.add_patch(patches_stdr)
     _fig_file_name = ["Kerrystandardized", "hist", str(hist_binsize.value)]
 
+    _xlabel = np.linspace(SEIS_MIN-1, SEIS_MAX+1, 9)
     if n_stats_to_plot_stdr != 0:
         for _s, _c in zip(table_stat_stdr.value, line_colors_stats):
             ax_stat_stdr.axvline(_s["Value"],
@@ -711,16 +985,19 @@ def _(
 
     ax_stat_stdr.grid(which="both",alpha=0.25)
     ax_stat_stdr.autoscale_view()
+    ax_stat_stdr.set_xticks(_xlabel)
+
     plt.tight_layout()
-    # fig_stat_stdr.suptitle(_title, fontsize=18, fontstyle="italic")
     _fig_file_name = "_".join(_fig_file_name)
     _download_lazy = mo.download(
         data = save_fig_buf(f=fig_stat_stdr),
         filename = _fig_file_name,
         label = _fig_file_name
     )
+    # print(_xlabel)
     mo.vstack([mo.as_html(fig_stat_stdr).center(), _download_lazy.center()]).center()
     # plt.show()        
+
     return
 
 
@@ -730,17 +1007,429 @@ def _(MASK, mo, n_ilines, n_xlines, np, nsample, seis_flatten_stdr_ori):
     _data[~MASK] = seis_flatten_stdr_ori
     run_button_stdr = mo.ui.run_button(
         label="Save `.npz` standardize")
-    run_button_stdr.center()
     return (run_button_stdr,)
 
 
 @app.cell(hide_code=True)
 def _(mo, run_button_stdr, save_on_click):
     if run_button_stdr.value:
-        _a = save_on_click(save_mask=True, suffix="_stdr")
+        BUTTON_2 = save_on_click(save_mask=True, suffix="_stdr")
     else:
-        _a = mo.md("### click button to save!").center()
-    _a
+        BUTTON_2 = mo.md("### Saved Standradized Data").center()
+
+    return (BUTTON_2,)
+
+
+@app.cell
+def _(BUTTON_2, mo, run_button_stdr):
+    mo.vstack([
+        BUTTON_2,
+        run_button_stdr.center(),
+    ])
+    return
+
+
+@app.cell(column=2)
+def _(mo):
+    mo.md(r"""# Cropping Data """).center()
+    return
+
+
+@app.cell
+def _(IL_END, IL_START, inline_full_num, inline_full_num_2):
+    if inline_full_num.value < inline_full_num_2.value:
+        il_crop_start = inline_full_num.value
+        il_crop_end   = inline_full_num_2.value
+    elif inline_full_num.value > inline_full_num_2.value:
+        il_crop_start = inline_full_num_2.value
+        il_crop_end   = inline_full_num.value
+    else:
+        il_crop_start = IL_START
+        il_crop_end   = IL_END
+
+    idx_il_crop_start  = il_crop_start - IL_START
+    idx_il_crop_stop   = il_crop_end   - idx_il_crop_start
+    print((il_crop_start, il_crop_end), (idx_il_crop_start, idx_il_crop_stop))
+    return il_crop_end, il_crop_start
+
+
+@app.cell
+def _(XL_END, XL_START, xline_full_num, xline_full_num_2):
+    if xline_full_num.value < xline_full_num_2.value:
+        xl_crop_start = xline_full_num.value
+        xl_crop_end   = xline_full_num_2.value
+    elif xline_full_num.value > xline_full_num_2.value:
+        xl_crop_start = xline_full_num_2.value
+        xl_crop_end   = xline_full_num.value
+    
+    else:
+        xl_crop_start = XL_START
+        xl_crop_end   = XL_END
+
+    idx_xl_crop_start  = xl_crop_start - XL_START
+    idx_xl_crop_stop   = xl_crop_end   - idx_xl_crop_start
+    print((xl_crop_start, xl_crop_end), (idx_xl_crop_start, idx_xl_crop_stop))
+    return xl_crop_end, xl_crop_start
+
+
+@app.cell
+def _(Z_END, Z_START, depth_full_num, depth_full_num_2):
+    if depth_full_num.value < depth_full_num_2.value:
+        depth_crop_start = depth_full_num.value
+        depth_crop_end   = depth_full_num_2.value
+    elif depth_full_num.value > depth_full_num_2.value:
+        depth_crop_start = depth_full_num_2.value
+        depth_crop_end   = depth_full_num.value
+    
+    else:
+        depth_crop_start = Z_START
+        depth_crop_end   = Z_END
+
+
+    idx_depth_crop_start  = depth_crop_start - Z_START
+    idx_depth_crop_stop   = depth_crop_end   - idx_depth_crop_start
+    print((depth_crop_start, depth_crop_end), (idx_depth_crop_start, idx_depth_crop_stop))
+    return depth_crop_end, depth_crop_start
+
+
+@app.cell
+def _(seis_np):
+    print(seis_np.shape)
+    return
+
+
+@app.cell
+def _():
+    return
+
+
+@app.cell
+def _(
+    IL_START,
+    XL_START,
+    depth_crop_end,
+    depth_crop_start,
+    il_crop_end,
+    il_crop_start,
+    np,
+    sample_rate,
+    seis_np,
+    xl_crop_end,
+    xl_crop_start,
+):
+    masked_crop_data = np.zeros_like(seis_np) * np.nan
+    masked_crop_data[
+            slice(il_crop_start - IL_START, il_crop_end - IL_START),
+            slice(xl_crop_start - XL_START, xl_crop_end - XL_START),
+            slice(depth_crop_start//sample_rate, depth_crop_end//sample_rate)] = seis_np[
+                slice(il_crop_start - IL_START, il_crop_end - IL_START),
+                slice(xl_crop_start - XL_START, xl_crop_end - XL_START),
+                slice(depth_crop_start//sample_rate, depth_crop_end//sample_rate)
+                ]
+
+    return (masked_crop_data,)
+
+
+@app.cell
+def _(
+    IL_START,
+    XL_START,
+    depth_crop_end,
+    depth_crop_start,
+    il_crop_end,
+    il_crop_start,
+    sample_rate,
+    seis_np,
+    xl_crop_end,
+    xl_crop_start,
+):
+    seis_np[
+                slice(il_crop_start - IL_START, il_crop_end - IL_START),
+                slice(xl_crop_start - XL_START, xl_crop_end - XL_START),
+                slice(depth_crop_start//sample_rate, depth_crop_end//sample_rate)
+                ].shape
+    return
+
+
+@app.cell
+def _(masked_crop_data):
+    masked_crop_data.shape
+    return
+
+
+@app.cell
+def _(XL_START, xl_crop_end, xl_crop_start):
+    (xl_crop_end - XL_START) - (xl_crop_start - XL_START)
+    return
+
+
+@app.cell
+def _(il_idx, il_idx_2, masked_crop_data, mo, plot_ilines, seis_np):
+    mo.hstack([
+        mo.vstack([
+            mo.md("## Original").center(),
+            plot_ilines(data=seis_np,
+                        idxs=(il_idx, il_idx_2),
+                        title = "KerryOriginal",)]),
+        mo.vstack([
+            mo.md("## Cropped").center(),
+            plot_ilines(data = masked_crop_data,
+                            idxs = (il_idx, il_idx_2-1),
+                            title = "KerryCropped",)])
+    ])
+    return
+
+
+@app.cell
+def _(masked_crop_data, mo, plot_xlines, seis_np, xl_idx, xl_idx_2):
+    mo.hstack([
+        mo.vstack([
+            mo.md("## Original").center(),
+            plot_xlines(data=seis_np,
+                        idxs=(xl_idx, xl_idx_2),
+                        title = "KerryOriginal",)]),
+        mo.vstack([
+            mo.md("## Cropped").center(),
+            plot_xlines(data = masked_crop_data,
+                            idxs = (xl_idx, xl_idx_2-1),
+                            title = "KerryCropped",)])
+    ])
+    return
+
+
+@app.cell
+def _(masked_crop_data, mo, plot_timedepths, seis_np, z_idx, z_idx_2):
+    mo.hstack([
+        mo.vstack([
+            mo.md("## Original").center(),
+            plot_timedepths(data = seis_np,
+                            idxs = (z_idx, z_idx_2),
+                            title = "KerryOriginal",)]),
+        mo.vstack([
+            mo.md("## Cropped").center(),
+            plot_timedepths(data = masked_crop_data,
+                            idxs = (z_idx, z_idx_2-1),
+                            title = "KerryCropped",)])
+    ])
+    return
+
+
+@app.cell
+def _(
+    IL_START,
+    XL_START,
+    depth_crop_end,
+    depth_crop_start,
+    il_crop_end,
+    il_crop_start,
+    masked_crop_data,
+    np,
+    sample_rate,
+    seis_flatten_ori,
+    xl_crop_end,
+    xl_crop_start,
+):
+    seis_flatten_crop = masked_crop_data[
+            slice(il_crop_start - IL_START, il_crop_end - IL_START),
+            slice(xl_crop_start - XL_START, xl_crop_end - XL_START),
+            slice(depth_crop_start//sample_rate, depth_crop_end//sample_rate)].flatten().flatten().flatten()
+    SEIS_CROP_MEAN = np.nanmean(seis_flatten_crop)
+    SEIS_CROP_STD = np.nanstd(seis_flatten_crop)
+    seis_flatten_crop = (seis_flatten_ori - SEIS_CROP_MEAN)/(SEIS_CROP_STD)
+    SEIS_MAX_stdr_crop = np.nanmax(seis_flatten_crop)
+    SEIS_MIN_stdr_crop = np.nanmin(seis_flatten_crop)
+    seis_stats_stdr_crop = {}
+    seis_stats_stdr_crop['max'] = SEIS_MAX_stdr_crop
+    seis_stats_stdr_crop['min'] = SEIS_MIN_stdr_crop
+    seis_stats_stdr_crop['std'] = SEIS_CROP_STD
+    seis_stats_stdr_crop['mean'] = SEIS_CROP_MEAN
+    seis_stats_stdr_crop['median'] = np.nanmedian(seis_flatten_crop)
+    seis_stats_stdr_crop = [dict(Statistic=stat, Value=val) for stat, val in seis_stats_stdr_crop.items()]
+    return seis_flatten_crop, seis_stats_stdr_crop
+
+
+@app.cell
+def _(
+    IL_START,
+    XL_START,
+    depth_crop_end,
+    depth_crop_start,
+    il_crop_end,
+    il_crop_start,
+    sample_rate,
+    xl_crop_end,
+    xl_crop_start,
+):
+    ((il_crop_end - IL_START) - (il_crop_start - IL_START),
+        (xl_crop_end - XL_START) - (xl_crop_start - XL_START),
+        depth_crop_end//sample_rate - depth_crop_start//sample_rate)
+    return
+
+
+@app.cell
+def _(seis_flatten_crop):
+    seis_flatten_crop.flatten().shape
+    return
+
+
+@app.cell
+def _(
+    IL_START,
+    XL_START,
+    depth_crop_end,
+    depth_crop_start,
+    il_crop_end,
+    il_crop_start,
+    masked_crop_data,
+    sample_rate,
+    seis_np,
+    xl_crop_end,
+    xl_crop_start,
+):
+    masked_crop_data.flatten().flatten().shape, seis_np[
+            slice(il_crop_start - IL_START, il_crop_end - IL_START),
+            slice(xl_crop_start - XL_START, xl_crop_end - XL_START),
+            slice(depth_crop_start//sample_rate, depth_crop_end//sample_rate)].shape
+    return
+
+
+@app.cell
+def _(masked_crop_data, seis_flatten_crop):
+    seis_flatten_crop.shape,masked_crop_data.shape
+    return
+
+
+@app.cell
+def _(
+    IL_START,
+    XL_START,
+    depth_crop_end,
+    depth_crop_start,
+    il_crop_end,
+    il_crop_start,
+    sample_rate,
+    seis_flatten_crop,
+    xl_crop_end,
+    xl_crop_start,
+):
+    crop_data_std = (
+        seis_flatten_crop
+        # .reshape(masked_crop_data.shape)
+        .reshape(
+            (
+                (il_crop_end - IL_START) - (il_crop_start - IL_START),
+                (xl_crop_end - XL_START) - (xl_crop_start - XL_START),
+                depth_crop_end//sample_rate - depth_crop_start//sample_rate,
+            )
+        )
+    )
+    crop_data_std = seis_flatten_crop
+    crop_data_std.shape
+    return
+
+
+@app.cell
+def _(XL_START, xl_crop_end, xl_crop_start):
+    (218272428 // 380) / (xl_crop_end - xl_crop_start - XL_START)
+    return
+
+
+@app.cell
+def _(mo, pd, save_tex_buf, seis_stats_stdr_crop):
+    _df = pd.DataFrame(seis_stats_stdr_crop)
+    _filename = "KerryStandardize_hist"
+    _latex_tabel = f"""\\begin{{tabel}}[ht!]
+    \\caption{{{_filename}}}
+    \\label{{tab:{_filename}}}
+    {_df.to_latex(index=False)}\\end{{tabel}}"""
+    _download_lazy = mo.download(
+        data = save_tex_buf(_latex_tabel),
+        filename = _filename + ".tex",
+        label=_filename + ".tex"
+    )
+    croped_latex = [
+        mo.hstack([mo.md(r"""## Cropped Standardization""").center(),
+        _download_lazy.center()]),
+        mo.ui.text_area(_latex_tabel, rows=10, full_width=True, max_length=100),
+    ]
+    return (croped_latex,)
+
+
+@app.cell
+def _(croped_latex, mo, seis_stats_stdr_crop):
+    table_stat_crop = mo.ui.table(data=seis_stats_stdr_crop, pagination=False)
+
+    mo.vstack(
+        croped_latex + [
+            mo.md("Select Statistic Values to be plot!").center(),
+            table_stat_crop
+        ]
+    )
+
+    return (table_stat_crop,)
+
+
+@app.cell
+def _(plt):
+    fig_stat_crop, ax_stat_crop = plt.subplots(1,1, figsize=(7,5))
+
+    return ax_stat_crop, fig_stat_crop
+
+
+@app.cell
+def _(make_histogram_seis, seis_flatten_crop):
+    N_crop, bins_crop, patches_crop = make_histogram_seis(data=seis_flatten_crop)
+    return (patches_crop,)
+
+
+@app.cell
+def _(
+    SEIS_MAX,
+    SEIS_MIN,
+    ax_stat_crop,
+    fig_stat_crop,
+    hist_binsize,
+    line_colors_stats,
+    mo,
+    np,
+    patches_crop,
+    plt,
+    save_fig_buf,
+    table_stat_crop,
+):
+    n_stats_to_plot_crop = len(table_stat_crop.value)
+    ax_stat_crop.clear();
+    ax_stat_crop.add_patch(patches_crop)
+    _fig_file_name = ["Kerrystandardized_cropped", "hist", str(hist_binsize.value)]
+
+    _xlabel = np.linspace(SEIS_MIN-1, SEIS_MAX+1, 9)
+    if n_stats_to_plot_crop != 0:
+        for _s, _c in zip(table_stat_crop.value, line_colors_stats):
+            ax_stat_crop.axvline(_s["Value"],
+                            color=_c, linestyle="dashed",
+                            linewidth=1,
+                            label=f"${_s['Statistic'].title()}={_s['Value']:.3f}$")
+            _fig_file_name += [_s['Statistic']]
+        ax_stat_crop.legend(ncols=1 + n_stats_to_plot_crop//2, bbox_to_anchor =(0.5,-0.35), loc='lower center')
+        _title = "Histogram of Seismic Amplitude"
+        ax_stat_crop.set_ylabel("Frequency", fontstyle="italic")
+        ax_stat_crop.set_xlabel("Amplitude", fontstyle="italic")
+    else:
+        _title = "Histogram of Seismic' Amplitude and Pick Statistic Values to plot, btw!"
+
+    ax_stat_crop.grid(which="both",alpha=0.25)
+    ax_stat_crop.autoscale_view()
+    ax_stat_crop.set_xticks(_xlabel)
+
+    plt.tight_layout()
+    _fig_file_name = "_".join(_fig_file_name)
+    _download_lazy = mo.download(
+        data = save_fig_buf(f=fig_stat_crop),
+        filename = _fig_file_name,
+        label = _fig_file_name
+    )
+    mo.vstack([mo.as_html(fig_stat_crop).center(), _download_lazy.center()]).center()
+
     return
 
 
