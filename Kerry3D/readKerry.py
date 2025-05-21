@@ -221,7 +221,7 @@ def _(mo, n_ilines, n_xlines, np, nsample, ntraces, stream):
             seis_np[il_1 - 510][xl_1 - 58] = tracei.data
 
         MASK = np.sum(np.abs(seis_np), axis=2)
-        MASK = np.where(MASK <= 0.10, True, False)
+        MASK = np.where(MASK == 0.000, True, False)
         for _z in range(nsample):
             _bar.update(subtitle=f"Masking data at vertical silce-{_z}")
             seis_np[:, :, _z][MASK] = np.nan
@@ -246,13 +246,12 @@ def _(mo, n_ilines, n_xlines, np, nsample, ntraces, stream):
         SEIS_MIN,
         SEIS_STD,
         seis_flatten,
-        seis_flatten_ori,
         seis_np,
         seis_stats,
     )
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _():
     from seiscm import seismic as seiscmap
     from io import BytesIO, StringIO
@@ -277,13 +276,7 @@ def _(BytesIO, plt):
     return save_fig_buf, save_tex_buf
 
 
-@app.cell
-def _(n_ilines, n_xlines, nsample):
-    n_ilines, n_xlines, nsample
-    return
-
-
-@app.cell
+@app.cell(hide_code=True)
 def _(n_ilines, n_xlines, nsample):
     sample_rate = 4
     IL_START = 58
@@ -296,16 +289,57 @@ def _(n_ilines, n_xlines, nsample):
     return IL_END, IL_START, XL_END, XL_START, Z_END, Z_START, sample_rate
 
 
+@app.cell(hide_code=True)
+def _():
+    from collections import namedtuple
+
+    TpVal = namedtuple("TpVal", ['value'])
+    return (TpVal,)
+
+
 @app.cell
 def _(IL_END, IL_START, XL_END, XL_START, Z_END, Z_START, mo, sample_rate):
-    xline_full_num  = mo.ui.number(start=XL_START, stop=XL_END, step=1, label="CROSSLINE NUMBER", value=610)
-    inline_full_num = mo.ui.number(start=IL_START, stop=IL_END, step=1, label="INLINE NUMBER", value=76,)
-    depth_full_num  = mo.ui.number(start=Z_START,  stop=Z_END,  step=sample_rate, label="TIME SLICE", value=120*4)
+    boundary_form = mo.md("""
+    | Boundary  | Start | Stop  |
+    | :-------: | :---: | :--:  |
+    | CROSSLINE | {xl1} | {xl2} |
+    | INLINE    | {il1} | {il2} |
+    | DEPTH     | {z1}  | {z2}  |
+    """).center().batch(
+        xl1 = mo.ui.number(start=XL_START, stop=XL_END, step=1, label="", value=45 + 510),
+        xl2 = mo.ui.number(start=XL_START, stop=XL_END, step=1, label="", value=45 + 510 + 608),
+        il1 = mo.ui.number(start=IL_START, stop=IL_END, step=1, label="", value=73,),
+        il2 = mo.ui.number(start=IL_START, stop=IL_END, step=1, label="", value=73 + 192,),
+        z1 = mo.ui.number(start=Z_START,  stop=Z_END,  step=sample_rate, label="", value=25*4),
+        z2 = mo.ui.number(start=Z_START,  stop=Z_END,  step=sample_rate, label="", value=(272 + 25) * 4),
+    ).form()
+    boundary_form
+    return (boundary_form,)
 
 
-    xline_full_num_2 = mo.ui.number(start=XL_START, stop=XL_END, step=1, label="CROSSLINE NUMBER", value=1200)
-    inline_full_num_2 = mo.ui.number(start=IL_START, stop=IL_END, step=1, label="INLINE NUMBER", value=270,)
-    depth_full_num_2 = mo.ui.number(start=Z_START,  stop=Z_END,  step=sample_rate, label="TIME SLICE", value=2000)
+@app.cell
+def _(boundary_form):
+    boundary_form.value
+    return
+
+
+@app.cell(hide_code=True)
+def _(TpVal, boundary_form):
+    xline_full_num  = TpVal(boundary_form.value["xl1"]) 
+    inline_full_num = TpVal(boundary_form.value["il1"]) 
+    depth_full_num  = TpVal(boundary_form.value["z1"]) 
+
+    #mo.ui.number(start=XL_START, stop=XL_END, step=1, label="CROSSLINE NUMBER", value=610)
+    #mo.ui.number(start=IL_START, stop=IL_END, step=1, label="INLINE NUMBER", value=76,)
+    #mo.ui.number(start=Z_START,  stop=Z_END,  step=sample_rate, label="TIME SLICE", value=120*4)
+
+    xline_full_num_2 = TpVal(boundary_form.value["xl2"])
+    inline_full_num_2 = TpVal(boundary_form.value["il2"])
+    depth_full_num_2 = TpVal(boundary_form.value["z2"])
+
+    # xline_full_num_2 = mo.ui.number(start=XL_START, stop=XL_END, step=1, label="CROSSLINE NUMBER", value=1200)
+    # inline_full_num_2 = mo.ui.number(start=IL_START, stop=IL_END, step=1, label="INLINE NUMBER", value=270,)
+    # depth_full_num_2 = mo.ui.number(start=Z_START,  stop=Z_END,  step=sample_rate, label="TIME SLICE", value=2000)
     return (
         depth_full_num,
         depth_full_num_2,
@@ -316,21 +350,7 @@ def _(IL_END, IL_START, XL_END, XL_START, Z_END, Z_START, mo, sample_rate):
     )
 
 
-@app.cell
-def _(depth_full_num, inline_full_num, mo, xline_full_num):
-    mo.vstack([mo.md("### Boundary 1").center(),
-               mo.hstack([inline_full_num, depth_full_num, xline_full_num])])
-    return
-
-
-@app.cell
-def _(depth_full_num_2, inline_full_num_2, mo, xline_full_num_2):
-    mo.vstack([mo.md("### Boundary 2").center(),
-               mo.hstack([inline_full_num_2, depth_full_num_2, xline_full_num_2])])
-    return
-
-
-@app.cell
+@app.cell(hide_code=True)
 def _(
     IL_START,
     SEIS_MAX,
@@ -346,7 +366,6 @@ def _(
 ):
     vminmax = dict(vmax=SEIS_MAX, vmin=SEIS_MIN)
 
-
     il_idx = inline_full_num.value-IL_START
     xl_idx = xline_full_num.value-XL_START
     z_idx = (depth_full_num.value - Z_START) // 4
@@ -357,68 +376,60 @@ def _(
     return il_idx, il_idx_2, vminmax, xl_idx, xl_idx_2, z_idx, z_idx_2
 
 
-@app.cell
-def _(
-    IL_START,
-    XL_START,
-    Z_START,
-    depth_full_num,
-    depth_full_num_2,
-    il_idx,
-    il_idx_2,
-    inline_full_num,
-    inline_full_num_2,
-    mo,
-    n_ilines,
-    n_xlines,
-    np,
-    nsample,
-    plt,
-    save_fig_buf,
-    seis_np,
-    seiscmap,
-    vminmax,
-    xl_idx,
-    xl_idx_2,
-    xline_full_num,
-    xline_full_num_2,
-    z_idx,
-    z_idx_2,
-):
+@app.cell(hide_code=True)
+def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
     def plot_ilines(
-        data=seis_np,
-        idxs=(il_idx, il_idx_2),
-        buttons     = (inline_full_num.value, inline_full_num_2.value),
-        vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
-        horbuttons  = (depth_full_num.value,  depth_full_num_2.value),
-        dims        = (n_ilines, n_xlines, nsample),
-        dim_start   = (IL_START, XL_START, Z_START),
-        title       = "KerryOriginal",
+        data        : np.ndarray,
+        idxs        : tuple[int, int],
+        buttons     : tuple[int, int],
+        vertbuttons : tuple[int, int],
+        horbuttons  : tuple[int, int],
+        vertidxs    : tuple[int, int],
+        horidxs     : tuple[int, int],
+        dims        : tuple[int, int, int],
+        dim_start   : tuple[int, int, int],
+        title       : str = "KerryOriginal",
+        minmax      : dict = vminmax,
     ) -> mo.Html:
         fig_iline, ax_iline = plt.subplots(1,2, figsize=(10,7), sharey=False, layout="compressed")
-        ax_iline[0].imshow(data[idxs[0], :, :].transpose(), seiscmap(), aspect="auto", **vminmax)
-        ax_iline[1].imshow(data[idxs[1], :, :].transpose(), seiscmap(), aspect="auto", **vminmax)
-        _n = 50
+        ax_iline[0].imshow(data[idxs[0], :, :].transpose(), seiscmap(), aspect="auto", **minmax)
+        ax_iline[1].imshow(data[idxs[1], :, :].transpose(), seiscmap(), aspect="auto", **minmax)
+        _n = 75
         for _ax, _d in zip(ax_iline, buttons):
             _ax.set_ylabel("TWT (s)", fontsize=15)
             _ax.set_xlabel("CROSSLINE", fontsize=15, labelpad=10)
+
             _ax.set_xticks(
                 np.arange(0, dims[1], _n),
                 np.arange(dim_start[1], dims[1]+dim_start[1], _n),
                 rotation=90)
             _ax.set_yticks(
-                np.arange(0, dims[2], _n*5),
-                np.arange(0, dims[2]*4, _n*4*5)/1000,
+                np.arange(0, dims[2], _n),
+                np.arange(0, (dims[2])*4, _n*4)/1000,
                 rotation=0)
-            _ax.set_title(f"$INLINE\ {_d}$", style="italic", fontsize=20)
-            _ax.axvline(xl_idx, color="blue", label=f"CROSSLINE {vertbuttons[0]}")
-            _ax.axvline(xl_idx_2, color="blue", linestyle="--", label=f"CROSSLINE {vertbuttons[1]}")
-            _ax.axhline(z_idx, color="black", label=f"TWT {horbuttons[0]} ms")
-            _ax.axhline(z_idx_2, color="black", linestyle="--", label=f"TWT {horbuttons[1]} ms")
+
+            # _axT = _ax.secondary_xaxis('top')
+            # _axT.set_xticks(
+            #     np.arange(0, dims[1], _n),
+            #     np.arange(dim_start[1], dims[1]+dim_start[1], _n),
+            #     rotation=90)
         
+            _axR = _ax.secondary_yaxis('right')
+            _axR.set_yticks(
+                np.arange(0, dims[2], _n),
+                np.arange(0, (dims[2])*4, _n*4)/1000,
+                rotation=0)
+
+            _ax.set_title(f"$INLINE\ {_d}$", style="italic", fontsize=20, pad=10)
+            _ax.axvline(vertidxs[0], color="blue", label=f"CROSSLINE {vertbuttons[0]}")
+            _ax.axvline(vertidxs[1], color="blue", linestyle="--", label=f"CROSSLINE {vertbuttons[1]}")
+            _ax.axhline(horidxs[0], color="black", label=f"TWT {horbuttons[0]} ms")
+            _ax.axhline(horidxs[1], color="black", linestyle="--", label=f"TWT {horbuttons[1]} ms")
+            _ax.grid(which="both", color="black", alpha=0.25, markevery=2, snap=True)
+
         _handles, _labels = ax_iline[1].get_legend_handles_labels()
         fig_iline.legend(_handles, _labels, ncols=4, loc='lower center', bbox_to_anchor =(0.5,-0.075))
-    
+
         _fig_file_name = [title,
                           "IL", str(buttons[0])     + "-" + str(buttons[1]),
                           "XL", str(vertbuttons[0]) + "-" + str(vertbuttons[1]),
@@ -435,93 +446,75 @@ def _(
     return (plot_ilines,)
 
 
-@app.cell
-def _(
-    depth_full_num,
-    depth_full_num_2,
-    il_idx,
-    il_idx_2,
-    inline_full_num,
-    inline_full_num_2,
-    n_ilines,
-    n_xlines,
-    nsample,
-    plot_ilines,
-    seis_np,
-    xline_full_num,
-    xline_full_num_2,
-):
-    plot_ilines(
-        data=seis_np,
-        idxs=(il_idx, il_idx_2),
-        buttons     = (inline_full_num.value, inline_full_num_2.value),
-        vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
-        horbuttons  = (depth_full_num.value,  depth_full_num_2.value),
-        dims        = (n_ilines, n_xlines, nsample),
-        dim_start   = (58, 510, 0),
-        title       = "KerryOriginal",)
+@app.cell(hide_code=True)
+def _():
+    # plot_ilines(
+    #     data=seis_np,
+    #     idxs=(il_idx, il_idx_2),
+    #     buttons     = (inline_full_num.value, inline_full_num_2.value),
+    #     vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
+    #     horbuttons  = (depth_full_num.value,  depth_full_num_2.value),
+    #     vertidxs    = (xl_idx, xl_idx_2),
+    #     horidxs     = (z_idx, z_idx_2),
+    #     dims        = (n_ilines, n_xlines, nsample),
+    #     dim_start   = (58, 510, 0),
+    #     title       = "KerryOriginal",)
     return
 
 
-@app.cell
-def _(
-    IL_START,
-    XL_START,
-    Z_START,
-    depth_full_num,
-    depth_full_num_2,
-    il_idx,
-    il_idx_2,
-    inline_full_num,
-    inline_full_num_2,
-    mo,
-    n_ilines,
-    n_xlines,
-    np,
-    nsample,
-    plt,
-    save_fig_buf,
-    seis_np,
-    seiscmap,
-    vminmax,
-    xl_idx,
-    xl_idx_2,
-    xline_full_num,
-    xline_full_num_2,
-    z_idx,
-    z_idx_2,
-):
+@app.cell(hide_code=True)
+def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
     def plot_xlines(
-        data        = seis_np,
-        idxs        = (xl_idx, xl_idx_2),
-        buttons     = (xline_full_num.value,  xline_full_num_2.value),
-        vertbuttons = (inline_full_num.value, inline_full_num_2.value),
-        horbuttons  = (depth_full_num.value,  depth_full_num_2.value),
-        dims        = (n_ilines, n_xlines, nsample),
-        dim_start   = (IL_START, XL_START, Z_START),
-        title       = "KerryOriginal",
+        data        : np.ndarray,
+        idxs        : tuple[int, int],
+        buttons     : tuple[int, int],
+        vertbuttons : tuple[int, int],
+        horbuttons  : tuple[int, int],
+        vertidxs    : tuple[int, int],
+        horidxs     : tuple[int, int],
+        dims        : tuple[int, int, int],
+        dim_start   : tuple[int, int, int],
+        title       : str = "KerryOriginal",
+        minmax      : dict[str, float] = vminmax
     ) -> mo.Html:
         fig_xline, ax_xline = plt.subplots(1,2, figsize=(10,7), sharey=False, layout="compressed")
-        _n = 50
-        ax_xline[0].imshow(data[:,idxs[0],:].transpose(), seiscmap(), aspect="auto", **vminmax)
-        ax_xline[1].imshow(data[:,idxs[1],:].transpose(), seiscmap(), aspect="auto", **vminmax)
-    
+        _n = 75
+        ax_xline[0].imshow(data[:,idxs[0],:].transpose(), seiscmap(), aspect="auto", **minmax)
+        ax_xline[1].imshow(data[:,idxs[1],:].transpose(), seiscmap(), aspect="auto", **minmax)
+
         for _ax, _d in zip(ax_xline, buttons):
             _ax.set_ylabel("TWT (s)", fontsize=15)
             _ax.set_xlabel("INLINE", labelpad=10, fontsize=15)
+
+        
             _ax.set_xticks(
                 np.arange(0, dims[0], _n),
                 np.arange(dim_start[0], dims[0]+dim_start[0], _n),
                 rotation=90)
             _ax.set_yticks(
-                np.arange(0, dims[2], _n*5),
-                np.arange(0, dims[2]*4, _n*4*5)/1000,
+                np.arange(0, dims[2], _n),
+                np.arange(0, dims[2]*4, _n*4)/1000,
                 rotation=0)
-            _ax.set_title(f"$CROSSLINE\ {_d}$", fontsize=20, style="italic")
-            _ax.axvline(il_idx, color="red", label=f"INLINE {vertbuttons[0]}")
-            _ax.axvline(il_idx_2, color="red", linestyle="--", label=f"INLINE {vertbuttons[1]}")
-            _ax.axhline(z_idx, color="black", label=f"TWT {horbuttons[0]} ms")
-            _ax.axhline(z_idx_2, color="black", linestyle="--", label=f"TWT {horbuttons[1]} ms")
+
+            # _axT = _ax.secondary_xaxis('top')
+            # _axT.set_xticks(
+            #     np.arange(0, dims[0], _n),
+            #     np.arange(dim_start[0], dims[0]+dim_start[0], _n),
+            #     rotation=90)
+
+            _axR = _ax.secondary_yaxis('right')
+            _axR.set_yticks(
+                np.arange(0, dims[2], _n),
+                np.arange(0, dims[2]*4, _n*4)/1000,
+                rotation=0)
+        
+            _ax.set_title(f"$CROSSLINE\ {_d}$", fontsize=20, style="italic", pad=10)
+            _ax.axvline(vertidxs[0], color="red", label=f"INLINE {vertbuttons[0]}")
+            _ax.axvline(vertidxs[1], color="red", linestyle="--", label=f"INLINE {vertbuttons[1]}")
+            _ax.axhline(horidxs[0], color="black", label=f"TWT {horbuttons[0]} ms")
+            _ax.axhline(horidxs[1], color="black", linestyle="--", label=f"TWT {horbuttons[1]} ms")
+            _ax.grid(which="both", color="black", alpha=0.25, markevery=2, snap=True)
+        
         _handles, _labels = ax_xline[1].get_legend_handles_labels()
         fig_xline.legend(_handles, _labels, ncols=4, loc='lower center', bbox_to_anchor =(0.5,-0.05))
 
@@ -541,80 +534,46 @@ def _(
     return (plot_xlines,)
 
 
-@app.cell
-def _(
-    depth_full_num,
-    depth_full_num_2,
-    inline_full_num,
-    inline_full_num_2,
-    n_ilines,
-    n_xlines,
-    nsample,
-    plot_xlines,
-    seis_np,
-    xl_idx,
-    xl_idx_2,
-    xline_full_num,
-    xline_full_num_2,
-):
-    plot_xlines(
-        data=seis_np,
-        idxs=(xl_idx, xl_idx_2),
-        buttons     = (xline_full_num.value,  xline_full_num_2.value),
-        vertbuttons = (inline_full_num.value, inline_full_num_2.value),
-        horbuttons  = (depth_full_num.value,  depth_full_num_2.value),
-        dims        = (n_ilines, n_xlines, nsample),
-        dim_start   = (58, 510, 0),
-        title       = "KerryOriginal",
-    )
+@app.cell(hide_code=True)
+def _():
+    # plot_xlines(
+    #     data=seis_np,
+    #     idxs=(xl_idx, xl_idx_2),
+    #     buttons     = (xline_full_num.value,  xline_full_num_2.value),
+    #     vertbuttons = (inline_full_num.value, inline_full_num_2.value),
+    #     horbuttons  = (depth_full_num.value,  depth_full_num_2.value),
+    #     vertidxs    = (il_idx, il_idx_2),
+    #     horidxs     = (z_idx, z_idx_2),
+    #     dims        = (n_ilines, n_xlines, nsample),
+    #     dim_start   = (58, 510, 0),
+    #     title       = "KerryOriginal",
+    # )
     return
 
 
-@app.cell
-def _(
-    IL_START,
-    XL_START,
-    Z_START,
-    depth_full_num,
-    depth_full_num_2,
-    il_idx,
-    il_idx_2,
-    inline_full_num,
-    inline_full_num_2,
-    mo,
-    n_ilines,
-    n_xlines,
-    np,
-    nsample,
-    plt,
-    save_fig_buf,
-    seis_np,
-    seiscmap,
-    vminmax,
-    xl_idx,
-    xl_idx_2,
-    xline_full_num,
-    xline_full_num_2,
-    z_idx,
-    z_idx_2,
-):
+@app.cell(hide_code=True)
+def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
     def plot_timedepths(
-        data=seis_np,
-        idxs=(z_idx, z_idx_2),
-        buttons     = (depth_full_num.value,  depth_full_num_2.value),
-        vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
-        horbuttons  = (inline_full_num.value, inline_full_num_2.value),
-        dims        = (n_ilines, n_xlines, nsample),
-        dim_start   = (IL_START, XL_START, Z_START),
-        title       = "KerryOriginal",
+        data: np.ndarray,
+        idxs: tuple[int, int],
+        buttons     : tuple[int, int],
+        vertbuttons : tuple[int, int],
+        horbuttons  : tuple[int, int],
+        vertidxs    : tuple[int, int],
+        horidxs     : tuple[int, int],
+        dims        : tuple[int, int, int],
+        dim_start   : tuple[int, int, int],
+        title       : str = "KerryOriginal",
+        minmax      : dict[str, float|int] = vminmax,
     ) -> mo.Html:
         fig_depth, ax_depth = plt.subplots(1,2, figsize=(10,10), sharey=False, layout="compressed")
-        ax_depth[0].imshow(data[:,:,idxs[0]].T, seiscmap(), aspect="equal", origin='upper', **vminmax)
-        ax_depth[1].imshow(data[:,:,idxs[1]].T, seiscmap(), aspect="equal", origin='upper', **vminmax)
-        _n = 50
+        ax_depth[0].imshow(data[:,:,idxs[0]].T, seiscmap(), aspect="equal", origin='upper', **minmax)
+        ax_depth[1].imshow(data[:,:,idxs[1]].T, seiscmap(), aspect="equal", origin='upper', **minmax)
+        _n = 25
         for _ax, _d in zip(ax_depth, buttons):
             _ax.set_xlabel("INLINE", fontsize=15)
             _ax.set_ylabel("CROSSLINE", fontsize=15)
+        
             _ax.set_xticks(
                 np.arange(0, dims[0], _n),
                 np.arange(dim_start[0], dims[0]+dim_start[0], _n),
@@ -622,14 +581,27 @@ def _(
             _ax.set_yticks(
                 np.arange(0, dims[1], _n),
                 np.arange(dim_start[1], dims[1]+dim_start[1], _n),
-                rotation=90)
-    
-            _ax.axhline(xl_idx, color="blue", label=f"CROSSLINE {vertbuttons[0]}")
-            _ax.axhline(xl_idx_2, color="blue", linestyle="--", label=f"CROSSLINE {vertbuttons[1]}")
-            _ax.axvline(il_idx, color="red", label=f"INLINE {horbuttons[0]}")
-            _ax.axvline(il_idx_2, color="red", linestyle="--", label=f"INLINE {horbuttons[1]}")
-            _ax.set_title(f"$TIME\ SLICE\ {_d} ms$", style="italic")
+                rotation=0)
         
+            _axR = _ax.secondary_yaxis('right')
+            _axT = _ax.secondary_xaxis('top')    
+
+            _axT.set_xticks(
+                np.arange(0, dims[0], _n),
+                np.arange(dim_start[0], dims[0]+dim_start[0], _n),
+                rotation=90)
+            _axR.set_yticks(
+                np.arange(0, dims[1], _n),
+                np.arange(dim_start[1], dims[1]+dim_start[1], _n),
+                rotation=0)
+
+            _ax.axhline(vertidxs[0], color="blue", label=f"CROSSLINE {vertbuttons[0]}")
+            _ax.axhline(vertidxs[1], color="blue", linestyle="--", label=f"CROSSLINE {vertbuttons[1]}")
+            _ax.axvline(horidxs[0], color="red", label=f"INLINE {horbuttons[0]}")
+            _ax.axvline(horidxs[1], color="red", linestyle="--", label=f"INLINE {horbuttons[1]}")
+            _ax.set_title(f"$TIME\ SLICE\ {_d} ms$", style="italic", pad=10)
+            _ax.grid(which="both", color="black", alpha=0.25, markevery=2, snap=True)
+
         _handles, _labels = ax_depth[1].get_legend_handles_labels()
         fig_depth.legend(_handles, _labels, ncols=4, loc='lower center', bbox_to_anchor =(0.5,-0.05))
         _fig_file_name = [title,
@@ -639,7 +611,7 @@ def _(
                          ]
         _fig_file_name = "_".join(_fig_file_name)
         # plt.show(
-    
+
         _download_lazy = mo.download(
             data = save_fig_buf(plt.gcf()),
             filename = _fig_file_name,
@@ -649,42 +621,20 @@ def _(
     return (plot_timedepths,)
 
 
-@app.cell
-def _(
-    depth_full_num,
-    depth_full_num_2,
-    inline_full_num,
-    inline_full_num_2,
-    n_ilines,
-    n_xlines,
-    nsample,
-    plot_timedepths,
-    seis_np,
-    xline_full_num,
-    xline_full_num_2,
-    z_idx,
-    z_idx_2,
-):
-    plot_timedepths(
-        data        = seis_np,
-        idxs        = (z_idx, z_idx_2),
-        buttons     = (depth_full_num.value,  depth_full_num_2.value),
-        vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
-        horbuttons  = (inline_full_num.value, inline_full_num_2.value),
-        dims        = (n_ilines, n_xlines, nsample),
-        dim_start   = (58, 510, 0),
-        title       = "KerryOriginal",
-    )
-    return
-
-
 @app.cell(hide_code=True)
-def _(il_idx, xl_idx, z_idx):
-    print("XL idx: {}, IL idx {}, TIME idx {}".format(
-        xl_idx,
-        il_idx,
-        z_idx
-    ))
+def _():
+    # plot_timedepths(
+    #     data        = seis_np,
+    #     idxs        = (z_idx, z_idx_2),
+    #     buttons     = (depth_full_num.value,  depth_full_num_2.value),
+    #     vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
+    #     horbuttons  = (inline_full_num.value, inline_full_num_2.value),
+    #     vertidxs    = (xl_idx, xl_idx_2),
+    #     horidxs     = (il_idx, il_idx_2),
+    #     dims        = (n_ilines, n_xlines, nsample),
+    #     dim_start   = (58, 510, 0),
+    #     title       = "KerryOriginal",
+    # )
     return
 
 
@@ -710,9 +660,9 @@ def _(MASK, filedir, mo, np, seis_np, time):
     return (save_on_click,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
-    run_button = mo.ui.run_button(label="Save `.npz`")
+    run_button = mo.ui.run_button(label="Click me to save!")
     # run_button.center()
     return (run_button,)
 
@@ -726,16 +676,7 @@ def _(mo, run_button, save_on_click):
     return (BUTTON_1,)
 
 
-@app.cell
-def _(BUTTON_1, mo, run_button):
-    mo.vstack([
-        BUTTON_1,
-        run_button.center(),
-    ])
-    return
-
-
-@app.cell(column=1)
+@app.cell(column=1, hide_code=True)
 def _():
     from matplotlib.ticker import ScalarFormatter
     return
@@ -748,13 +689,13 @@ def _(mo):
     return (hist_binsize,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(hist_binsize, mo):
     mo.vstack([mo.md(r"""# Data Preprocessing """).center(), hist_binsize.center()])
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""## Original""").center()
     return
@@ -796,13 +737,8 @@ def _(mo, ori_latex, seis_stats):
 
 @app.cell(hide_code=True)
 def _():
-    return
-
-
-@app.cell(hide_code=True)
-def _(plt):
-    fig_stat, ax_stat = plt.subplots(1,1, figsize=(7,5))
-    return ax_stat, fig_stat
+    from matplotlib.ticker import FormatStrFormatter
+    return (FormatStrFormatter,)
 
 
 @app.cell(hide_code=True)
@@ -826,12 +762,19 @@ def _(hist_binsize, np, pltPatches, pltPath, seis_flatten):
                                      facecolor="gray", alpha=0.5, linewidth=0.1)
         patch.sticky_edges.y[:] = [0]
         return n, bins, patch
+    return (make_histogram_seis,)
+
+
+@app.cell
+def _(make_histogram_seis, plt):
+    fig_stat, ax_stat = plt.subplots(1,1, figsize=(5,5))
     N, bins, patches = make_histogram_seis()
-    return make_histogram_seis, patches
+    return ax_stat, fig_stat, patches
 
 
 @app.cell(hide_code=True)
 def _(
+    FormatStrFormatter,
     SEIS_MAX,
     SEIS_MIN,
     ax_stat,
@@ -849,7 +792,7 @@ def _(
     n_stats_to_plot = len(table_stat.value)
     ax_stat.clear(); ax_stat.add_patch(patches)
     _xlabel = np.linspace(SEIS_MIN-1, SEIS_MAX+1, 9)
-    _fig_file_name = ["KerryOriginal", "hist", str(hist_binsize.value)]
+    _fig_file_name = ["KerryOriginal", str(hist_binsize.value)]
 
     if n_stats_to_plot != 0:
         for _s, _c in zip(table_stat.value, line_colors_stats):
@@ -862,12 +805,14 @@ def _(
         _title = "Histogram of Seismic Amplitude"
         ax_stat.set_ylabel("Frequency", fontstyle="italic")
         ax_stat.set_xlabel("Amplitude", fontstyle="italic")
+        # ax_stat.set_xticks()
     else:
         _title = "Histogram of Seismic' Amplitude and Pick Statistic Values to plot, btw!"
 
     ax_stat.grid(which="both",alpha=0.25)
     ax_stat.autoscale_view()
-    ax_stat.set_xticks(_xlabel)
+    ax_stat.set_xticks(_xlabel, _xlabel, rotation=90)
+    ax_stat.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     _fig_file_name = "_".join(_fig_file_name)
     _download_lazy = mo.download(
         data = save_fig_buf(f=fig_stat),
@@ -881,8 +826,24 @@ def _(
 
 @app.cell
 def _(mo):
-    mo.md(r"""## Standardization""").center()
+    mo.md(r"""## Cropping & Standardization""").center()
     return
+
+
+@app.cell
+def _(SEIS_MEAN, SEIS_STD, masked_crop_data, np):
+    seis_flatten_stdr_ori = (masked_crop_data - SEIS_MEAN)/(SEIS_STD)
+    seis_flatten_stdr = seis_flatten_stdr_ori[~np.isnan(seis_flatten_stdr_ori)].flatten()
+    SEIS_MAX_stdr = np.nanmax(seis_flatten_stdr)
+    SEIS_MIN_stdr = np.nanmin(seis_flatten_stdr)
+    seis_stats_stdr = {}
+    seis_stats_stdr['max'] = SEIS_MAX_stdr
+    seis_stats_stdr['min'] = SEIS_MIN_stdr
+    seis_stats_stdr['std'] = np.nanstd(seis_flatten_stdr)
+    seis_stats_stdr['mean'] = np.nanmean(seis_flatten_stdr)
+    seis_stats_stdr['median'] = np.nanmedian(seis_flatten_stdr)
+    seis_stats_stdr = [dict(Statistic=stat, Value=val) for stat, val in seis_stats_stdr.items()]
+    return seis_flatten_stdr, seis_stats_stdr
 
 
 @app.cell(hide_code=True)
@@ -900,7 +861,7 @@ def _(mo, pd, save_tex_buf, seis_stats_stdr):
     )
 
     std_latex = [
-        mo.hstack([mo.md(r"""## Standardization""").center(),
+        mo.hstack([mo.md(r"""## Cropped & Standardization""").center(),
         _download_lazy.center()]),
         mo.ui.text_area(_latex_tabel, rows=10, full_width=True, max_length=100),
     ]
@@ -921,35 +882,20 @@ def _(mo, seis_stats_stdr, std_latex):
 
 
 @app.cell
-def _(plt):
-    fig_stat_stdr, ax_stat_stdr = plt.subplots(1,1, figsize=(7,5))
-    return ax_stat_stdr, fig_stat_stdr
+def _():
+    return
 
 
 @app.cell
-def _(SEIS_MEAN, SEIS_STD, np, seis_flatten_ori):
-    seis_flatten_stdr_ori = (seis_flatten_ori - SEIS_MEAN)/(SEIS_STD)
-    seis_flatten_stdr = seis_flatten_stdr_ori.flatten()
-    SEIS_MAX_stdr = np.nanmax(seis_flatten_stdr)
-    SEIS_MIN_stdr = np.nanmin(seis_flatten_stdr)
-    seis_stats_stdr = {}
-    seis_stats_stdr['max'] = SEIS_MAX_stdr
-    seis_stats_stdr['min'] = SEIS_MIN_stdr
-    seis_stats_stdr['std'] = np.nanstd(seis_flatten_stdr)
-    seis_stats_stdr['mean'] = np.nanmean(seis_flatten_stdr)
-    seis_stats_stdr['median'] = np.nanmedian(seis_flatten_stdr)
-    seis_stats_stdr = [dict(Statistic=stat, Value=val) for stat, val in seis_stats_stdr.items()]
-    return seis_flatten_stdr, seis_flatten_stdr_ori, seis_stats_stdr
-
-
-@app.cell
-def _(make_histogram_seis, seis_flatten_stdr):
+def _(make_histogram_seis, plt, seis_flatten_stdr):
+    fig_stat_stdr, ax_stat_stdr = plt.subplots(1,1, figsize=(5,5))
     N_stdr, bins_stdr, patches_stdr = make_histogram_seis(data=seis_flatten_stdr)
-    return (patches_stdr,)
+    return ax_stat_stdr, fig_stat_stdr, patches_stdr
 
 
 @app.cell(hide_code=True)
 def _(
+    FormatStrFormatter,
     SEIS_MAX,
     SEIS_MIN,
     ax_stat_stdr,
@@ -966,7 +912,7 @@ def _(
     n_stats_to_plot_stdr = len(table_stat_stdr.value)
     ax_stat_stdr.clear();
     ax_stat_stdr.add_patch(patches_stdr)
-    _fig_file_name = ["Kerrystandardized", "hist", str(hist_binsize.value)]
+    _fig_file_name = ["Kerrystandardized_cropped", str(hist_binsize.value)]
 
     _xlabel = np.linspace(SEIS_MIN-1, SEIS_MAX+1, 9)
     if n_stats_to_plot_stdr != 0:
@@ -985,7 +931,8 @@ def _(
 
     ax_stat_stdr.grid(which="both",alpha=0.25)
     ax_stat_stdr.autoscale_view()
-    ax_stat_stdr.set_xticks(_xlabel)
+    ax_stat_stdr.set_xticks(_xlabel, _xlabel, rotation=90)
+    ax_stat_stdr.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
     plt.tight_layout()
     _fig_file_name = "_".join(_fig_file_name)
@@ -1001,41 +948,13 @@ def _(
     return
 
 
-@app.cell
-def _(MASK, mo, n_ilines, n_xlines, np, nsample, seis_flatten_stdr_ori):
-    _data = np.zeros((n_ilines, n_xlines, nsample))
-    _data[~MASK] = seis_flatten_stdr_ori
-    run_button_stdr = mo.ui.run_button(
-        label="Save `.npz` standardize")
-    return (run_button_stdr,)
-
-
-@app.cell(hide_code=True)
-def _(mo, run_button_stdr, save_on_click):
-    if run_button_stdr.value:
-        BUTTON_2 = save_on_click(save_mask=True, suffix="_stdr")
-    else:
-        BUTTON_2 = mo.md("### Saved Standradized Data").center()
-
-    return (BUTTON_2,)
-
-
-@app.cell
-def _(BUTTON_2, mo, run_button_stdr):
-    mo.vstack([
-        BUTTON_2,
-        run_button_stdr.center(),
-    ])
-    return
-
-
-@app.cell(column=2)
+@app.cell(column=2, hide_code=True)
 def _(mo):
     mo.md(r"""# Cropping Data """).center()
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(IL_END, IL_START, inline_full_num, inline_full_num_2):
     if inline_full_num.value < inline_full_num_2.value:
         il_crop_start = inline_full_num.value
@@ -1049,11 +968,11 @@ def _(IL_END, IL_START, inline_full_num, inline_full_num_2):
 
     idx_il_crop_start  = il_crop_start - IL_START
     idx_il_crop_stop   = il_crop_end   - idx_il_crop_start
-    print((il_crop_start, il_crop_end), (idx_il_crop_start, idx_il_crop_stop))
-    return il_crop_end, il_crop_start
+    # print((il_crop_start, il_crop_end), (idx_il_crop_start, idx_il_crop_stop))
+    return idx_il_crop_start, il_crop_end, il_crop_start
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(XL_END, XL_START, xline_full_num, xline_full_num_2):
     if xline_full_num.value < xline_full_num_2.value:
         xl_crop_start = xline_full_num.value
@@ -1061,18 +980,18 @@ def _(XL_END, XL_START, xline_full_num, xline_full_num_2):
     elif xline_full_num.value > xline_full_num_2.value:
         xl_crop_start = xline_full_num_2.value
         xl_crop_end   = xline_full_num.value
-    
+
     else:
         xl_crop_start = XL_START
         xl_crop_end   = XL_END
 
     idx_xl_crop_start  = xl_crop_start - XL_START
     idx_xl_crop_stop   = xl_crop_end   - idx_xl_crop_start
-    print((xl_crop_start, xl_crop_end), (idx_xl_crop_start, idx_xl_crop_stop))
-    return xl_crop_end, xl_crop_start
+    # print((xl_crop_start, xl_crop_end), (idx_xl_crop_start, idx_xl_crop_stop))
+    return idx_xl_crop_start, xl_crop_end, xl_crop_start
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(Z_END, Z_START, depth_full_num, depth_full_num_2):
     if depth_full_num.value < depth_full_num_2.value:
         depth_crop_start = depth_full_num.value
@@ -1080,7 +999,7 @@ def _(Z_END, Z_START, depth_full_num, depth_full_num_2):
     elif depth_full_num.value > depth_full_num_2.value:
         depth_crop_start = depth_full_num_2.value
         depth_crop_end   = depth_full_num.value
-    
+
     else:
         depth_crop_start = Z_START
         depth_crop_end   = Z_END
@@ -1088,22 +1007,17 @@ def _(Z_END, Z_START, depth_full_num, depth_full_num_2):
 
     idx_depth_crop_start  = depth_crop_start - Z_START
     idx_depth_crop_stop   = depth_crop_end   - idx_depth_crop_start
-    print((depth_crop_start, depth_crop_end), (idx_depth_crop_start, idx_depth_crop_stop))
-    return depth_crop_end, depth_crop_start
+    # print((depth_crop_start, depth_crop_end), (idx_depth_crop_start, idx_depth_crop_stop))
+    return depth_crop_end, depth_crop_start, idx_depth_crop_start
 
 
 @app.cell
-def _(seis_np):
-    print(seis_np.shape)
-    return
+def _(np, seis_np):
+    template_zero = np.zeros_like(seis_np)
+    return (template_zero,)
 
 
-@app.cell
-def _():
-    return
-
-
-@app.cell
+@app.cell(hide_code=True)
 def _(
     IL_START,
     XL_START,
@@ -1114,107 +1028,300 @@ def _(
     np,
     sample_rate,
     seis_np,
+    template_zero,
     xl_crop_end,
     xl_crop_start,
 ):
-    masked_crop_data = np.zeros_like(seis_np) * np.nan
+    # normalized_seis_np = ((seis_np - SEIS_MIN) / (SEIS_MAX - SEIS_MIN))
+    # normalized_seis_np = 2 * ((normalized_seis_np - 0) / (1 - 0)) - 1
+
+    # normalized_seis_np = 2 * ((seis_np - SEIS_MIN) / (SEIS_MAX - SEIS_MIN)) - 1
+
+    # normalized_seis_np = (seis_np - SEIS_MEAN) / SEIS_STD
+
+    normalized_seis_np = seis_np
+
+    masked_crop_data = template_zero * np.nan
+    # masked_crop_data *= np.nan
     masked_crop_data[
             slice(il_crop_start - IL_START, il_crop_end - IL_START),
             slice(xl_crop_start - XL_START, xl_crop_end - XL_START),
-            slice(depth_crop_start//sample_rate, depth_crop_end//sample_rate)] = seis_np[
+            slice(depth_crop_start//sample_rate, depth_crop_end//sample_rate)] = normalized_seis_np[
                 slice(il_crop_start - IL_START, il_crop_end - IL_START),
                 slice(xl_crop_start - XL_START, xl_crop_end - XL_START),
                 slice(depth_crop_start//sample_rate, depth_crop_end//sample_rate)
                 ]
-
     return (masked_crop_data,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(
-    IL_START,
-    XL_START,
-    depth_crop_end,
-    depth_crop_start,
-    il_crop_end,
-    il_crop_start,
-    sample_rate,
+    depth_full_num,
+    depth_full_num_2,
+    il_idx,
+    il_idx_2,
+    inline_full_num,
+    inline_full_num_2,
+    masked_crop_data,
+    mo,
+    n_ilines,
+    n_xlines,
+    nsample,
+    plot_ilines,
     seis_np,
-    xl_crop_end,
-    xl_crop_start,
+    xl_idx,
+    xl_idx_2,
+    xline_full_num,
+    xline_full_num_2,
+    z_idx,
+    z_idx_2,
 ):
-    seis_np[
-                slice(il_crop_start - IL_START, il_crop_end - IL_START),
-                slice(xl_crop_start - XL_START, xl_crop_end - XL_START),
-                slice(depth_crop_start//sample_rate, depth_crop_end//sample_rate)
-                ].shape
-    return
-
-
-@app.cell
-def _(masked_crop_data):
-    masked_crop_data.shape
-    return
-
-
-@app.cell
-def _(XL_START, xl_crop_end, xl_crop_start):
-    (xl_crop_end - XL_START) - (xl_crop_start - XL_START)
-    return
-
-
-@app.cell
-def _(il_idx, il_idx_2, masked_crop_data, mo, plot_ilines, seis_np):
     mo.hstack([
         mo.vstack([
             mo.md("## Original").center(),
             plot_ilines(data=seis_np,
                         idxs=(il_idx, il_idx_2),
+                        buttons     = (inline_full_num.value, inline_full_num_2.value),
+                        vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
+                        horbuttons  = (depth_full_num.value,  depth_full_num_2.value),
+                        dims        = (n_ilines, n_xlines, nsample),
+                        vertidxs    = (xl_idx, xl_idx_2),
+                        horidxs     = (z_idx, z_idx_2),
+                        dim_start   = (58, 510, 0),
                         title = "KerryOriginal",)]),
         mo.vstack([
             mo.md("## Cropped").center(),
             plot_ilines(data = masked_crop_data,
-                            idxs = (il_idx, il_idx_2-1),
-                            title = "KerryCropped",)])
+                        buttons     = (inline_full_num.value, inline_full_num_2.value),
+                        vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
+                        horbuttons  = (depth_full_num.value,  depth_full_num_2.value),
+                        dims        = (n_ilines, n_xlines, nsample),
+                        vertidxs    = (xl_idx, xl_idx_2),
+                        horidxs     = (z_idx, z_idx_2),
+                        dim_start   = (58, 510, 0),
+                        idxs = (il_idx, il_idx_2-1),
+                        title = "KerryCropped",
+                        # minmax = dict(vmin=-1, vmax=1)
+                       )])
     ])
     return
 
 
-@app.cell
-def _(masked_crop_data, mo, plot_xlines, seis_np, xl_idx, xl_idx_2):
+@app.cell(hide_code=True)
+def _(
+    depth_full_num,
+    depth_full_num_2,
+    il_idx,
+    il_idx_2,
+    inline_full_num,
+    inline_full_num_2,
+    masked_crop_data,
+    mo,
+    n_ilines,
+    n_xlines,
+    nsample,
+    plot_xlines,
+    seis_np,
+    xl_idx,
+    xl_idx_2,
+    xline_full_num,
+    xline_full_num_2,
+    z_idx,
+    z_idx_2,
+):
     mo.hstack([
         mo.vstack([
             mo.md("## Original").center(),
             plot_xlines(data=seis_np,
                         idxs=(xl_idx, xl_idx_2),
+                        buttons     = (depth_full_num.value,  depth_full_num_2.value),
+                        vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
+                        horbuttons  = (inline_full_num.value, inline_full_num_2.value),
+                        dims        = (n_ilines, n_xlines, nsample),
+                        vertidxs    = (il_idx, il_idx_2),
+                        horidxs     = (z_idx, z_idx_2),
+                        dim_start   = (58, 510, 0),                    
                         title = "KerryOriginal",)]),
         mo.vstack([
             mo.md("## Cropped").center(),
             plot_xlines(data = masked_crop_data,
-                            idxs = (xl_idx, xl_idx_2-1),
-                            title = "KerryCropped",)])
+                        idxs = (xl_idx, xl_idx_2-1),
+                        buttons     = (depth_full_num.value,  depth_full_num_2.value),
+                        vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
+                        horbuttons  = (inline_full_num.value, inline_full_num_2.value),
+                        dims        = (n_ilines, n_xlines, nsample),
+                        vertidxs    = (il_idx, il_idx_2),
+                        horidxs     = (z_idx, z_idx_2),
+                        dim_start   = (58, 510, 0),                    
+                        title       = "KerryCropped",
+                        # minmax       = dict(vmin=-1, vmax=1) 
+                       )])
     ])
     return
 
 
-@app.cell
-def _(masked_crop_data, mo, plot_timedepths, seis_np, z_idx, z_idx_2):
+@app.cell(hide_code=True)
+def _():
+    # seis_kerry = np.load("./kerry_from_github.npy")
+    # seis_kerry_r = 2 * ((seis_kerry - np.nanmin(seis_kerry)) / (np.nanmax(seis_kerry) - np.nanmin(seis_kerry))) - 1
+    # _sum_ver = np.sum(np.abs(seis_kerry_r), axis=2)
+    # _sum_ver = np.where(_sum_ver >= _sum_ver.min()+ 0.01, True, False)
+    # for _i in range(272):
+    #     _slice = seis_kerry_r[:, :, _i]
+    #     seis_kerry[:, :, _i] = np.where(_sum_ver, _slice, np.nan)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    # _x, _y, _z = seis_kerry.shape
+    # mo.md(f"""
+    # | LINE      | START                   | STOP                  | RANGE                                      | CROPPED GITHUB | 
+    # | :-------- | :---------------------: | :-------------------: | :----------------------------------------: | :------------: | 
+    # | INLINE    | ${il_crop_start}$       | ${il_crop_end}$       | ${il_crop_end - il_crop_start}$            | ${_y}$         | 
+    # | CROSSLINE | ${xl_crop_start}$       | ${xl_crop_end}$       | ${xl_crop_end - xl_crop_start}$            | ${_x}$         | 
+    # | TWT       | ${depth_crop_start//4}$ | ${depth_crop_end//4}$ | ${(depth_crop_end - depth_crop_start)//4}$ | ${_z}$         | 
+    # """).center()
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    # seis_kerry_shape = seis_kerry.shape
+    # kerry_ghub_z = mo.ui.number(value=10, start=0, stop=seis_kerry_shape[2]-1, step=1, label="z")
+    # kerry_ghub_x = mo.ui.number(value=34, start=0, stop=seis_kerry_shape[0]-1, step=1, label="x")
+    # kerry_ghub_y = mo.ui.number(value=188, start=0, stop=seis_kerry_shape[1]-1, step=1, label="y")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    # _f, _ax = plt.subplot_mosaic(
+    #     [
+    #         # ["z", "z", "z", "x", "x"],
+    #         # ["y", 'y', 'y', ".", "."],
+    #         ["x", "x", "y", "y", "y"],
+    #         ["x", "x", "y", "y", "y"],
+    #         ["z", "z", "z", "z", "z"],
+    #     ],
+    #     figsize=(15, 10),
+    #     gridspec_kw={"width_ratios":[0.5, 1, 0.5, 1.2, 3]},#, "height_ratios":[0.5, 0.5, 2]},
+    #     layout="compressed")
+    # _dict = dict(cmap=seiscmap(), aspect="auto", vmin=np.nanmin(seis_kerry), vmax=np.nanmax(seis_kerry))
+    # _z = _ax['z'].imshow(seis_kerry[:,:,kerry_ghub_z.value].T  , **_dict, origin="upper")
+    # _ax['x'].imshow(seis_kerry[kerry_ghub_x.value,:,:].T, **_dict)
+    # _ax['y'].imshow(seis_kerry[:,kerry_ghub_y.value,:].T  , **_dict, origin="upper")
+    # plt.colorbar(_z, orientation="horizontal")
+    # _ax['y'].grid(color="yellow")
+    # _ax['x'].grid(color="yellow")
+    # mo.vstack(
+    #     [
+    #         mo.hstack(
+    #             [kerry_ghub_x, kerry_ghub_y, kerry_ghub_z]
+    #         ),
+    #         mo.as_html(plt.gcf()).center()
+    #     ])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    # cropped_norm_ori = normalized_seis_np[
+    #         slice(il_crop_start - IL_START, il_crop_end - IL_START),
+    #         slice(xl_crop_start - XL_START, xl_crop_end - XL_START),
+    #         slice(depth_crop_start//sample_rate, 1+(depth_crop_end//sample_rate)),
+    #     ]
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    # _n = 0.1
+    # _f, _ax = plt.subplot_mosaic(
+    #     [
+    #         # ["z", "z", "z", "x", "x"],
+    #         # ["y", 'y', 'y', ".", "."],
+    #         ["x", "x", "y", "y", "y"],
+    #         ["x", "x", "y", "y", "y"],
+    #         ["z", "z", "z", "z", "z"],
+    #     ],
+    #     figsize=(15, 10),
+    #     gridspec_kw={"width_ratios":[0.5, 1, 0.5, 1.2, 3]},#, "height_ratios":[0.5, 0.5, 2]},
+    #     layout="compressed")
+    # _dict = dict(cmap=seiscmap(), aspect="auto", vmin=-1, vmax=1)
+    # _z = _ax['z'].imshow(cropped_norm_ori[:,:,kerry_ghub_z.value]  , **_dict, origin="upper")
+    # _ax['y'].imshow(cropped_norm_ori[kerry_ghub_y.value,:,:].T, **_dict)
+    # _ax['x'].imshow(cropped_norm_ori[:,kerry_ghub_x.value,:].T  , **_dict, origin="upper")
+    # _ax['y'].grid(color="yellow")
+    # _ax['x'].grid(color="yellow")
+    # plt.colorbar(_z, orientation="horizontal")
+    # mo.vstack(
+    #     [
+    #         mo.hstack(
+    #             [kerry_ghub_x, kerry_ghub_y, kerry_ghub_z]
+    #         ),
+    #         mo.as_html(plt.gcf()).center()
+    #     ])
+    return
+
+
+@app.cell(hide_code=True)
+def _(
+    depth_full_num,
+    depth_full_num_2,
+    il_idx,
+    il_idx_2,
+    inline_full_num,
+    inline_full_num_2,
+    masked_crop_data,
+    mo,
+    n_ilines,
+    n_xlines,
+    nsample,
+    plot_timedepths,
+    seis_np,
+    xl_idx,
+    xl_idx_2,
+    xline_full_num,
+    xline_full_num_2,
+    z_idx,
+    z_idx_2,
+):
     mo.hstack([
         mo.vstack([
             mo.md("## Original").center(),
-            plot_timedepths(data = seis_np,
-                            idxs = (z_idx, z_idx_2),
-                            title = "KerryOriginal",)]),
+            plot_timedepths(
+                data        = seis_np,
+                idxs        = (z_idx, z_idx_2),
+                buttons     = (depth_full_num.value,  depth_full_num_2.value),
+                vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
+                horbuttons  = (inline_full_num.value, inline_full_num_2.value),
+                dims        = (n_ilines, n_xlines, nsample),
+                vertidxs    = (xl_idx, xl_idx_2),
+                horidxs     = (il_idx, il_idx_2),
+                dim_start   = (58, 510, 0),
+                title       = "KerryOriginal",
+            )]),
         mo.vstack([
             mo.md("## Cropped").center(),
-            plot_timedepths(data = masked_crop_data,
-                            idxs = (z_idx, z_idx_2-1),
-                            title = "KerryCropped",)])
+            plot_timedepths(
+                data = masked_crop_data,
+                idxs = (z_idx, z_idx_2-1),
+                buttons     = (depth_full_num.value,  depth_full_num_2.value),
+                vertbuttons = (xline_full_num.value,  xline_full_num_2.value),
+                horbuttons  = (inline_full_num.value, inline_full_num_2.value),
+                vertidxs    = (xl_idx, xl_idx_2),
+                horidxs     = (il_idx, il_idx_2),
+                dims        = (n_ilines, n_xlines, nsample),
+                dim_start   = (58, 510, 0),
+                title = "KerryCropped", 
+                # minmax = {"vmin":-1, "vmax":1},
+            )])
     ])
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(
     IL_START,
     XL_START,
@@ -1225,17 +1332,25 @@ def _(
     masked_crop_data,
     np,
     sample_rate,
-    seis_flatten_ori,
     xl_crop_end,
     xl_crop_start,
 ):
-    seis_flatten_crop = masked_crop_data[
-            slice(il_crop_start - IL_START, il_crop_end - IL_START),
-            slice(xl_crop_start - XL_START, xl_crop_end - XL_START),
-            slice(depth_crop_start//sample_rate, depth_crop_end//sample_rate)].flatten().flatten().flatten()
+    to_be_saved_cropped = masked_crop_data[slice(il_crop_start - IL_START, il_crop_end - IL_START), :, :]
+    to_be_saved_cropped = to_be_saved_cropped[:, slice(xl_crop_start - XL_START, xl_crop_end - XL_START), :]
+    to_be_saved_cropped = to_be_saved_cropped[:, :, slice(depth_crop_start//sample_rate, depth_crop_end//sample_rate)]
+
+    mask_tb_cropped = to_be_saved_cropped.astype(np.bool_)
+
+    # print(to_be_saved_cropped.shape, mask_tb_cropped.shape)
+    return mask_tb_cropped, to_be_saved_cropped
+
+
+@app.cell(hide_code=True)
+def _(np, to_be_saved_cropped):
+    seis_flatten_crop = to_be_saved_cropped.flatten().flatten().flatten()
     SEIS_CROP_MEAN = np.nanmean(seis_flatten_crop)
     SEIS_CROP_STD = np.nanstd(seis_flatten_crop)
-    seis_flatten_crop = (seis_flatten_ori - SEIS_CROP_MEAN)/(SEIS_CROP_STD)
+    seis_flatten_crop = (seis_flatten_crop[~np.isnan(seis_flatten_crop)])# - SEIS_CROP_MEAN) / SEIS_CROP_STD
     SEIS_MAX_stdr_crop = np.nanmax(seis_flatten_crop)
     SEIS_MIN_stdr_crop = np.nanmin(seis_flatten_crop)
     seis_stats_stdr_crop = {}
@@ -1248,93 +1363,7 @@ def _(
     return seis_flatten_crop, seis_stats_stdr_crop
 
 
-@app.cell
-def _(
-    IL_START,
-    XL_START,
-    depth_crop_end,
-    depth_crop_start,
-    il_crop_end,
-    il_crop_start,
-    sample_rate,
-    xl_crop_end,
-    xl_crop_start,
-):
-    ((il_crop_end - IL_START) - (il_crop_start - IL_START),
-        (xl_crop_end - XL_START) - (xl_crop_start - XL_START),
-        depth_crop_end//sample_rate - depth_crop_start//sample_rate)
-    return
-
-
-@app.cell
-def _(seis_flatten_crop):
-    seis_flatten_crop.flatten().shape
-    return
-
-
-@app.cell
-def _(
-    IL_START,
-    XL_START,
-    depth_crop_end,
-    depth_crop_start,
-    il_crop_end,
-    il_crop_start,
-    masked_crop_data,
-    sample_rate,
-    seis_np,
-    xl_crop_end,
-    xl_crop_start,
-):
-    masked_crop_data.flatten().flatten().shape, seis_np[
-            slice(il_crop_start - IL_START, il_crop_end - IL_START),
-            slice(xl_crop_start - XL_START, xl_crop_end - XL_START),
-            slice(depth_crop_start//sample_rate, depth_crop_end//sample_rate)].shape
-    return
-
-
-@app.cell
-def _(masked_crop_data, seis_flatten_crop):
-    seis_flatten_crop.shape,masked_crop_data.shape
-    return
-
-
-@app.cell
-def _(
-    IL_START,
-    XL_START,
-    depth_crop_end,
-    depth_crop_start,
-    il_crop_end,
-    il_crop_start,
-    sample_rate,
-    seis_flatten_crop,
-    xl_crop_end,
-    xl_crop_start,
-):
-    crop_data_std = (
-        seis_flatten_crop
-        # .reshape(masked_crop_data.shape)
-        .reshape(
-            (
-                (il_crop_end - IL_START) - (il_crop_start - IL_START),
-                (xl_crop_end - XL_START) - (xl_crop_start - XL_START),
-                depth_crop_end//sample_rate - depth_crop_start//sample_rate,
-            )
-        )
-    )
-    crop_data_std = seis_flatten_crop
-    crop_data_std.shape
-    return
-
-
-@app.cell
-def _(XL_START, xl_crop_end, xl_crop_start):
-    (218272428 // 380) / (xl_crop_end - xl_crop_start - XL_START)
-    return
-
-
-@app.cell
+@app.cell(hide_code=True)
 def _(mo, pd, save_tex_buf, seis_stats_stdr_crop):
     _df = pd.DataFrame(seis_stats_stdr_crop)
     _filename = "KerryStandardize_hist"
@@ -1348,14 +1377,14 @@ def _(mo, pd, save_tex_buf, seis_stats_stdr_crop):
         label=_filename + ".tex"
     )
     croped_latex = [
-        mo.hstack([mo.md(r"""## Cropped Standardization""").center(),
+        mo.hstack([mo.md(r"""## Cropped""").center(),
         _download_lazy.center()]),
         mo.ui.text_area(_latex_tabel, rows=10, full_width=True, max_length=100),
     ]
     return (croped_latex,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(croped_latex, mo, seis_stats_stdr_crop):
     table_stat_crop = mo.ui.table(data=seis_stats_stdr_crop, pagination=False)
 
@@ -1365,25 +1394,19 @@ def _(croped_latex, mo, seis_stats_stdr_crop):
             table_stat_crop
         ]
     )
-
     return (table_stat_crop,)
 
 
-@app.cell
-def _(plt):
-    fig_stat_crop, ax_stat_crop = plt.subplots(1,1, figsize=(7,5))
-
-    return ax_stat_crop, fig_stat_crop
-
-
-@app.cell
-def _(make_histogram_seis, seis_flatten_crop):
+@app.cell(hide_code=True)
+def _(make_histogram_seis, plt, seis_flatten_crop):
+    fig_stat_crop, ax_stat_crop = plt.subplots(1,1, figsize=(5,5))
     N_crop, bins_crop, patches_crop = make_histogram_seis(data=seis_flatten_crop)
-    return (patches_crop,)
+    return ax_stat_crop, fig_stat_crop, patches_crop
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(
+    FormatStrFormatter,
     SEIS_MAX,
     SEIS_MIN,
     ax_stat_crop,
@@ -1400,7 +1423,7 @@ def _(
     n_stats_to_plot_crop = len(table_stat_crop.value)
     ax_stat_crop.clear();
     ax_stat_crop.add_patch(patches_crop)
-    _fig_file_name = ["Kerrystandardized_cropped", "hist", str(hist_binsize.value)]
+    _fig_file_name = ["Kerry_cropped", str(hist_binsize.value)]
 
     _xlabel = np.linspace(SEIS_MIN-1, SEIS_MAX+1, 9)
     if n_stats_to_plot_crop != 0:
@@ -1419,7 +1442,8 @@ def _(
 
     ax_stat_crop.grid(which="both",alpha=0.25)
     ax_stat_crop.autoscale_view()
-    ax_stat_crop.set_xticks(_xlabel)
+    ax_stat_crop.set_xticks(_xlabel, _xlabel, rotation=90)
+    ax_stat_crop.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
     plt.tight_layout()
     _fig_file_name = "_".join(_fig_file_name)
@@ -1430,6 +1454,299 @@ def _(
     )
     mo.vstack([mo.as_html(fig_stat_crop).center(), _download_lazy.center()]).center()
 
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    run_button_cropped = mo.ui.run_button(label="Click me to save!")
+    # run_button.center()
+    return (run_button_cropped,)
+
+
+@app.cell(hide_code=True)
+def _(
+    depth_crop_end,
+    depth_crop_start,
+    il_crop_end,
+    il_crop_start,
+    mask_tb_cropped,
+    mo,
+    np,
+    run_button_cropped,
+    save_on_click,
+    to_be_saved_cropped,
+    xl_crop_end,
+    xl_crop_start,
+):
+    _buttons     = (depth_crop_start, depth_crop_end)
+    _vertbuttons = (xl_crop_start, xl_crop_end)
+    _horbuttons  = (il_crop_start, il_crop_end)
+
+    _suffix      = "_".join(
+        [
+            "_TWT", str(_buttons[0])     + "-" + str(_buttons[1]),
+            "XL", str(_vertbuttons[0]) + "-" + str(_vertbuttons[1]),
+            "IL", str(_horbuttons[0]) + "-" + str(_horbuttons[1])
+        ])
+    # print(_suffix)
+    if run_button_cropped.value:
+        BUTTON_CROPPED = save_on_click(data=to_be_saved_cropped, suffix=_suffix, save_mask=True, mask=mask_tb_cropped.astype(np.int16))
+    else:
+        BUTTON_CROPPED = mo.md("### Save Cropped data to `.npz`").center()
+    return (BUTTON_CROPPED,)
+
+
+@app.cell(hide_code=True)
+def _(BUTTON_1, BUTTON_CROPPED, mo, run_button, run_button_cropped):
+    mo.hstack([
+        mo.vstack([
+            BUTTON_1,
+            run_button.center(),
+        ]),
+        mo.vstack([
+            BUTTON_CROPPED,
+            run_button_cropped.center(),
+        ])
+    ])
+    return
+
+
+@app.cell
+def _():
+    return
+
+
+@app.cell(column=3, hide_code=True)
+def _(
+    depth_crop_end,
+    depth_crop_start,
+    il_crop_end,
+    il_crop_start,
+    mo,
+    sample_rate,
+    xl_crop_end,
+    xl_crop_start,
+):
+    _buttons     = (depth_crop_start, depth_crop_start)
+    _vertbuttons = (xl_crop_start, xl_crop_end)
+    _horbuttons  = (il_crop_start, il_crop_end)
+
+    boundary_cropped = mo.md("""
+    | Boundary  | Start | Stop  |
+    | :-------: | :---: | :--:  |
+    | CROSSLINE | {xl1} | {xl2} |
+    | INLINE    | {il1} | {il2} |
+    | DEPTH     | {z1}  | {z2}  |
+    """).center().batch(
+        xl1 = mo.ui.number(start=xl_crop_start, stop=xl_crop_end, step=1, label="", value=xl_crop_start),
+        xl2 = mo.ui.number(start=xl_crop_start, stop=xl_crop_end, step=1, label="", value=xl_crop_end-1),
+        il1 = mo.ui.number(start=il_crop_start, stop=il_crop_end, step=1, label="", value=il_crop_start,),
+        il2 = mo.ui.number(start=il_crop_start, stop=il_crop_end, step=1, label="", value=il_crop_end - 1,),
+        z1 = mo.ui.number(start=depth_crop_start,  stop=depth_crop_end,  step=sample_rate, label="", value=depth_crop_start),
+        z2 = mo.ui.number(start=depth_crop_start,  stop=depth_crop_end,  step=sample_rate, label="", value=depth_crop_end - 1),
+    ).form()
+    boundary_cropped
+    return (boundary_cropped,)
+
+
+@app.cell
+def _(xl_crop_end):
+    xl_crop_end
+    return
+
+
+@app.cell(hide_code=True)
+def _(TpVal, boundary_cropped):
+    xline_full_crp  = TpVal(boundary_cropped.value["xl1"]) 
+    inline_full_crp = TpVal(boundary_cropped.value["il1"]) 
+    depth_full_crp  = TpVal(boundary_cropped.value["z1"]) 
+
+    xline_full_crp_2  = TpVal(boundary_cropped.value["xl2"])
+    inline_full_crp_2 = TpVal(boundary_cropped.value["il2"])
+    depth_full_crp_2  = TpVal(boundary_cropped.value["z2"])
+    return (
+        depth_full_crp,
+        depth_full_crp_2,
+        inline_full_crp,
+        inline_full_crp_2,
+        xline_full_crp,
+        xline_full_crp_2,
+    )
+
+
+@app.cell
+def _(idx_depth_crop_start):
+    idx_depth_crop_start
+    return
+
+
+@app.cell(hide_code=True)
+def _(
+    IL_START,
+    XL_START,
+    Z_START,
+    depth_full_crp,
+    depth_full_crp_2,
+    idx_depth_crop_start,
+    idx_il_crop_start,
+    idx_xl_crop_start,
+    inline_full_crp,
+    inline_full_crp_2,
+    xline_full_crp,
+    xline_full_crp_2,
+):
+    il_idx_crp = inline_full_crp.value - IL_START - idx_il_crop_start
+    xl_idx_crp =  xline_full_crp.value - XL_START - idx_xl_crop_start
+    z_idx_crp  = ((depth_full_crp.value - Z_START) // 4) -  (idx_depth_crop_start // 4)
+
+    il_idx_crp_2 = inline_full_crp_2.value - IL_START - idx_il_crop_start
+    xl_idx_crp_2 =  xline_full_crp_2.value - XL_START - idx_xl_crop_start
+    z_idx_crp_2  = ((depth_full_crp_2.value - Z_START) // 4) - (idx_depth_crop_start // 4)
+
+    print(f"""
+
+    {il_idx_crp=}
+    {il_idx_crp_2=}
+
+    {xl_idx_crp=}
+    {xl_idx_crp_2=}
+
+    {z_idx_crp=}
+    {z_idx_crp_2=}
+
+    """)
+    return (
+        il_idx_crp,
+        il_idx_crp_2,
+        xl_idx_crp,
+        xl_idx_crp_2,
+        z_idx_crp,
+        z_idx_crp_2,
+    )
+
+
+@app.cell
+def _(to_be_saved_cropped):
+    cropped_shape = to_be_saved_cropped.shape
+    return (cropped_shape,)
+
+
+@app.cell(hide_code=True)
+def _(
+    cropped_shape,
+    depth_full_crp,
+    depth_full_crp_2,
+    il_idx_crp,
+    il_idx_crp_2,
+    inline_full_crp,
+    inline_full_crp_2,
+    mo,
+    plot_ilines,
+    to_be_saved_cropped,
+    xl_idx_crp,
+    xl_idx_crp_2,
+    xline_full_crp,
+    xline_full_crp_2,
+    z_idx_crp,
+    z_idx_crp_2,
+):
+    mo.vstack([
+        mo.md("## Cropped").center(),
+        plot_ilines(data=to_be_saved_cropped,
+                    idxs=(il_idx_crp, il_idx_crp_2),
+                    buttons     = (inline_full_crp.value, inline_full_crp_2.value),
+                    vertbuttons = (xline_full_crp.value,  xline_full_crp_2.value),
+                    vertidxs    = (xl_idx_crp, xl_idx_crp_2),  
+                    horbuttons  = (depth_full_crp.value,  depth_full_crp_2.value),
+                    horidxs     = (z_idx_crp, z_idx_crp_2),
+                    dims        = cropped_shape,
+                    dim_start   = (
+                        inline_full_crp.value + 0,
+                        xline_full_crp.value + 0,
+                        (depth_full_crp.value) + 0,
+                    ),
+                    title = "KerryCropped",)
+    ])
+    return
+
+
+@app.cell(hide_code=True)
+def _(
+    cropped_shape,
+    depth_full_crp,
+    depth_full_crp_2,
+    il_idx_crp,
+    il_idx_crp_2,
+    inline_full_crp,
+    inline_full_crp_2,
+    mo,
+    plot_xlines,
+    to_be_saved_cropped,
+    xl_idx_crp,
+    xl_idx_crp_2,
+    xline_full_crp,
+    xline_full_crp_2,
+    z_idx_crp,
+    z_idx_crp_2,
+):
+    mo.vstack([
+        mo.md("## Cropped").center(),
+        plot_xlines(data=to_be_saved_cropped,
+                    idxs=(xl_idx_crp, xl_idx_crp_2),
+                    buttons     = (xline_full_crp.value,  xline_full_crp_2.value),
+                    vertbuttons = (inline_full_crp.value, inline_full_crp_2.value),
+                    horbuttons  = (depth_full_crp.value,  depth_full_crp_2.value),
+                    vertidxs    = (il_idx_crp, il_idx_crp_2),  
+                    horidxs     = (z_idx_crp, z_idx_crp_2),
+                    dims        = cropped_shape,
+                    dim_start   = (
+                        inline_full_crp.value + 0,
+                        xline_full_crp.value + 0,
+                        (depth_full_crp.value) + 0,
+                    ),
+                    title = "KerryCropped",)
+    ])
+    return
+
+
+@app.cell(hide_code=True)
+def _(
+    cropped_shape,
+    depth_full_crp,
+    depth_full_crp_2,
+    il_idx_crp,
+    il_idx_crp_2,
+    inline_full_crp,
+    inline_full_crp_2,
+    mo,
+    plot_timedepths,
+    to_be_saved_cropped,
+    xl_idx_crp,
+    xl_idx_crp_2,
+    xline_full_crp,
+    xline_full_crp_2,
+    z_idx_crp,
+    z_idx_crp_2,
+):
+    mo.vstack([
+        mo.md("## Cropped").center(),
+        plot_timedepths(
+            data=to_be_saved_cropped,
+            idxs=(z_idx_crp, z_idx_crp_2),
+            buttons     = (depth_full_crp.value,  depth_full_crp_2.value),
+            horbuttons  = (inline_full_crp.value, inline_full_crp_2.value),
+            vertbuttons = (xline_full_crp.value,  xline_full_crp_2.value),
+            horidxs     = (il_idx_crp, il_idx_crp_2),
+            vertidxs    = (xl_idx_crp, xl_idx_crp_2),
+            dims        = cropped_shape,
+            dim_start   = (
+                        inline_full_crp.value + 0,
+                        xline_full_crp.value + 0,
+                        (depth_full_crp.value) + 0,
+            ),
+            title = "KerryCropped",)
+    ])
     return
 
 
