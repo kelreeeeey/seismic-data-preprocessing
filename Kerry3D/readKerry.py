@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.13.11"
+__generated_with = "0.13.10"
 app = marimo.App(width="columns", layout_file="layouts/readKerry.grid.json")
 
 
@@ -259,8 +259,19 @@ def _():
     from matplotlib import colors
     import matplotlib.patches as pltPatches
     import matplotlib.path as pltPath
+    from matplotlib.ticker import FormatStrFormatter, StrMethodFormatter
+
     from itertools import cycle
-    return BytesIO, cycle, pd, pltPatches, pltPath, seiscmap
+
+    return (
+        BytesIO,
+        FormatStrFormatter,
+        cycle,
+        pd,
+        pltPatches,
+        pltPath,
+        seiscmap,
+    )
 
 
 @app.cell
@@ -407,7 +418,7 @@ def _(
     return il_idx, il_idx_2, vminmax, xl_idx, xl_idx_2, z_idx, z_idx_2
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
     def plot_ilines(
         data        : np.ndarray,
@@ -426,7 +437,19 @@ def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
         fig_iline, ax_iline = plt.subplots(1,2, figsize=(10,7), sharey=False, layout="compressed")
         ax_iline[0].imshow(data[idxs[0], :, :].transpose(), seiscmap(), aspect="auto", **minmax)
         ax_iline[1].imshow(data[idxs[1], :, :].transpose(), seiscmap(), aspect="auto", **minmax)
+    
         _n = 75 if not n else n
+        _m = 1000
+    
+        _yticks = np.arange(0, dims[2], _n)
+        _ytickslabel = [
+            str(x)[:5] for x in np.linspace(
+                dim_start[2],
+                ( (dims[2]*4) + dim_start[2] ),
+                len(_yticks),
+                endpoint=False)/_m
+        ]
+
         for _ax, _d in zip(ax_iline, buttons):
             _ax.set_ylabel("TWT (s)", fontsize=15)
             _ax.set_xlabel("CROSSLINE", fontsize=15, labelpad=10)
@@ -435,22 +458,10 @@ def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
                 np.arange(0, dims[1], _n),
                 np.arange(dim_start[1], dims[1]+dim_start[1], _n),
                 rotation=90)
-            _ax.set_yticks(
-                np.arange(0, dims[2], _n),
-                np.arange(0, (dims[2])*4, _n*4)/1000,
-                rotation=0)
 
-            # _axT = _ax.secondary_xaxis('top')
-            # _axT.set_xticks(
-            #     np.arange(0, dims[1], _n),
-            #     np.arange(dim_start[1], dims[1]+dim_start[1], _n),
-            #     rotation=90)
-
+            _ax.set_yticks(_yticks, _ytickslabel, rotation=0)
             _axR = _ax.secondary_yaxis('right')
-            _axR.set_yticks(
-                np.arange(0, dims[2], _n),
-                np.arange(0, (dims[2])*4, _n*4)/1000,
-                rotation=0)
+            _axR.set_yticks(_yticks, _ytickslabel, rotation=0)
 
             _ax.set_title(f"$INLINE\ {_d}$", style="italic", fontsize=20, pad=10)
             _ax.axvline(vertidxs[0], color="blue", label=f"CROSSLINE {vertbuttons[0]}")
@@ -494,7 +505,7 @@ def _():
     return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
     def plot_xlines(
         data        : np.ndarray,
@@ -510,36 +521,30 @@ def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
         minmax      : dict[str, float] = vminmax,
         n           : int | None = None
     ) -> mo.Html:
+    
         fig_xline, ax_xline = plt.subplots(1,2, figsize=(10,7), sharey=False, layout="compressed")
         _n = 75 if not n else n
+        _m = 1000
+    
         ax_xline[0].imshow(data[:,idxs[0],:].transpose(), seiscmap(), aspect="auto", **minmax)
         ax_xline[1].imshow(data[:,idxs[1],:].transpose(), seiscmap(), aspect="auto", **minmax)
+
+        _yticks = np.arange(0, dims[2], _n)
+        _ytickslabel = [
+            str(x)[:5] for x in np.linspace(
+                dim_start[2],
+                ( (dims[2]*4) + dim_start[2] ),
+                len(_yticks),
+                endpoint=False)/_m
+        ]
 
         for _ax, _d in zip(ax_xline, buttons):
             _ax.set_ylabel("TWT (s)", fontsize=15)
             _ax.set_xlabel("INLINE", labelpad=10, fontsize=15)
 
-
-            _ax.set_xticks(
-                np.arange(0, dims[0], _n),
-                np.arange(dim_start[0], dims[0]+dim_start[0], _n),
-                rotation=90)
-            _ax.set_yticks(
-                np.arange(0, dims[2], _n),
-                np.arange(0, dims[2]*4, _n*4)/1000,
-                rotation=0)
-
-            # _axT = _ax.secondary_xaxis('top')
-            # _axT.set_xticks(
-            #     np.arange(0, dims[0], _n),
-            #     np.arange(dim_start[0], dims[0]+dim_start[0], _n),
-            #     rotation=90)
-
+            _ax.set_yticks(_yticks, _ytickslabel, rotation=0)
             _axR = _ax.secondary_yaxis('right')
-            _axR.set_yticks(
-                np.arange(0, dims[2], _n),
-                np.arange(0, dims[2]*4, _n*4)/1000,
-                rotation=0)
+            _axR.set_yticks(_yticks, _ytickslabel, rotation=0)
 
             _ax.set_title(f"$CROSSLINE\ {_d}$", fontsize=20, style="italic", pad=10)
             _ax.axvline(vertidxs[0], color="red", label=f"INLINE {vertbuttons[0]}")
@@ -771,8 +776,7 @@ def _(mo, ori_latex, seis_stats):
 
 @app.cell(hide_code=True)
 def _():
-    from matplotlib.ticker import FormatStrFormatter
-    return (FormatStrFormatter,)
+    return
 
 
 @app.cell(hide_code=True)
@@ -1706,6 +1710,12 @@ def _(
                     title = "KerryCropped2",
                     n = 25)
     ])
+    return
+
+
+@app.cell
+def _(depth_full_num):
+    depth_full_num.value
     return
 
 
