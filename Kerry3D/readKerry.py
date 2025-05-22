@@ -421,11 +421,12 @@ def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
         dim_start   : tuple[int, int, int],
         title       : str = "KerryOriginal",
         minmax      : dict = vminmax,
+        n           : int | None = None
     ) -> mo.Html:
         fig_iline, ax_iline = plt.subplots(1,2, figsize=(10,7), sharey=False, layout="compressed")
         ax_iline[0].imshow(data[idxs[0], :, :].transpose(), seiscmap(), aspect="auto", **minmax)
         ax_iline[1].imshow(data[idxs[1], :, :].transpose(), seiscmap(), aspect="auto", **minmax)
-        _n = 75
+        _n = 75 if not n else n
         for _ax, _d in zip(ax_iline, buttons):
             _ax.set_ylabel("TWT (s)", fontsize=15)
             _ax.set_xlabel("CROSSLINE", fontsize=15, labelpad=10)
@@ -506,10 +507,11 @@ def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
         dims        : tuple[int, int, int],
         dim_start   : tuple[int, int, int],
         title       : str = "KerryOriginal",
-        minmax      : dict[str, float] = vminmax
+        minmax      : dict[str, float] = vminmax,
+        n           : int | None = None
     ) -> mo.Html:
         fig_xline, ax_xline = plt.subplots(1,2, figsize=(10,7), sharey=False, layout="compressed")
-        _n = 75
+        _n = 75 if not n else n
         ax_xline[0].imshow(data[:,idxs[0],:].transpose(), seiscmap(), aspect="auto", **minmax)
         ax_xline[1].imshow(data[:,idxs[1],:].transpose(), seiscmap(), aspect="auto", **minmax)
 
@@ -596,11 +598,12 @@ def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
         dim_start   : tuple[int, int, int],
         title       : str = "KerryOriginal",
         minmax      : dict[str, float|int] = vminmax,
+        n           : int | None = None
     ) -> mo.Html:
         fig_depth, ax_depth = plt.subplots(1,2, figsize=(10,10), sharey=False, layout="compressed")
         ax_depth[0].imshow(data[:,:,idxs[0]].T, seiscmap(), aspect="equal", origin='upper', **minmax)
         ax_depth[1].imshow(data[:,:,idxs[1]].T, seiscmap(), aspect="equal", origin='upper', **minmax)
-        _n = 25
+        _n = 25 if not n else n
         for _ax, _d in zip(ax_depth, buttons):
             _ax.set_xlabel("INLINE", fontsize=15)
             _ax.set_ylabel("CROSSLINE", fontsize=15)
@@ -1587,7 +1590,7 @@ def _(xl_crop_end):
     return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(TpVal, boundary_cropped):
     xline_full_crp  = TpVal(boundary_cropped.value["xl1"]) 
     inline_full_crp = TpVal(boundary_cropped.value["il1"]) 
@@ -1663,15 +1666,17 @@ def _(to_be_saved_cropped):
     return (cropped_shape,)
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(
     cropped_shape,
     depth_full_crp,
     depth_full_crp_2,
+    depth_full_num,
     il_idx_crp,
     il_idx_crp_2,
     inline_full_crp,
     inline_full_crp_2,
+    inline_full_num,
     mo,
     plot_ilines,
     to_be_saved_cropped,
@@ -1679,6 +1684,7 @@ def _(
     xl_idx_crp_2,
     xline_full_crp,
     xline_full_crp_2,
+    xline_full_num,
     z_idx_crp,
     z_idx_crp_2,
 ):
@@ -1693,11 +1699,12 @@ def _(
                     horidxs     = (z_idx_crp, z_idx_crp_2),
                     dims        = cropped_shape,
                     dim_start   = (
-                        inline_full_crp.value + 0,
-                        xline_full_crp.value + 0,
-                        (depth_full_crp.value) + 0,
+                        inline_full_num.value + 0,
+                        xline_full_num.value + 0,
+                        (depth_full_num.value) + 0,
                     ),
-                    title = "KerryCropped2",)
+                    title = "KerryCropped2",
+                    n = 25)
     ])
     return
 
@@ -1707,10 +1714,12 @@ def _(
     cropped_shape,
     depth_full_crp,
     depth_full_crp_2,
+    depth_full_num,
     il_idx_crp,
     il_idx_crp_2,
     inline_full_crp,
     inline_full_crp_2,
+    inline_full_num,
     mo,
     plot_xlines,
     to_be_saved_cropped,
@@ -1718,6 +1727,7 @@ def _(
     xl_idx_crp_2,
     xline_full_crp,
     xline_full_crp_2,
+    xline_full_num,
     z_idx_crp,
     z_idx_crp_2,
 ):
@@ -1732,11 +1742,12 @@ def _(
                     horidxs     = (z_idx_crp, z_idx_crp_2),
                     dims        = cropped_shape,
                     dim_start   = (
-                        inline_full_crp.value + 0,
-                        xline_full_crp.value + 0,
-                        (depth_full_crp.value) + 0,
+                        inline_full_num.value + 0,
+                        xline_full_num.value + 0,
+                        (depth_full_num.value) + 0,
                     ),
-                    title = "KerryCropped2",)
+                    title = "KerryCropped2",
+                    n = 25)
     ])
     return
 
@@ -1746,10 +1757,12 @@ def _(
     cropped_shape,
     depth_full_crp,
     depth_full_crp_2,
+    depth_full_num,
     il_idx_crp,
     il_idx_crp_2,
     inline_full_crp,
     inline_full_crp_2,
+    inline_full_num,
     mo,
     plot_timedepths,
     to_be_saved_cropped,
@@ -1757,6 +1770,7 @@ def _(
     xl_idx_crp_2,
     xline_full_crp,
     xline_full_crp_2,
+    xline_full_num,
     z_idx_crp,
     z_idx_crp_2,
 ):
@@ -1772,9 +1786,9 @@ def _(
             vertidxs    = (xl_idx_crp, xl_idx_crp_2),
             dims        = cropped_shape,
             dim_start   = (
-                        inline_full_crp.value + 0,
-                        xline_full_crp.value + 0,
-                        (depth_full_crp.value) + 0,
+                        inline_full_num.value + 0,
+                        xline_full_num.value + 0,
+                        (depth_full_num.value) + 0,
             ),
             title = "KerryCropped2",)
     ])
