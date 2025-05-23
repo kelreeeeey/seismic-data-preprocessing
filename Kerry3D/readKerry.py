@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.13.10"
+__generated_with = "0.13.11"
 app = marimo.App(width="columns", layout_file="layouts/readKerry.grid.json")
 
 
@@ -38,7 +38,7 @@ def _(mo):
     return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(filename, kerry_url, mo, read):
     if filename.exists():
         _ntask = 2
@@ -172,7 +172,7 @@ def _(mo):
     return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo, np, stream):
     # collection data from stream
     n_stream = len(stream)+1
@@ -201,7 +201,7 @@ def _(mo, np, stream):
     return n_ilines, n_xlines
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo, n_ilines, n_xlines, np, nsample, ntraces, stream):
     # streaming traces
     Bar_collecting_trace = mo.status.progress_bar(
@@ -211,6 +211,8 @@ def _(mo, n_ilines, n_xlines, np, nsample, ntraces, stream):
     )
 
     seis_np = np.zeros((n_ilines, n_xlines, nsample))
+    seis_coord = np.zeros((n_ilines, n_xlines, 2))
+    seis_lines = np.zeros((n_ilines, n_xlines, 2))
 
     with Bar_collecting_trace as _bar:
         for i_4 in range(ntraces):
@@ -219,6 +221,10 @@ def _(mo, n_ilines, n_xlines, np, nsample, ntraces, stream):
             il_1 = tracei.stats.segy.trace_header.source_energy_direction_exponent
             xl_1 = tracei.stats.segy.trace_header.ensemble_number
             seis_np[il_1 - 510][xl_1 - 58] = tracei.data
+            seis_coord[il_1 - 510][xl_1 - 58][0] = tracei.stats.segy.trace_header.source_coordinate_x
+            seis_coord[il_1 - 510][xl_1 - 58][1] = tracei.stats.segy.trace_header.source_coordinate_y
+            seis_lines[il_1 - 510][xl_1 - 58][0] = il_1
+            seis_lines[il_1 - 510][xl_1 - 58][1] = xl_1
 
         MASK = np.sum(np.abs(seis_np), axis=2)
         MASK = np.where(MASK == 0.000, True, False)
@@ -251,7 +257,94 @@ def _(mo, n_ilines, n_xlines, np, nsample, ntraces, stream):
     )
 
 
-@app.cell(hide_code=True)
+@app.cell
+def _():
+    # import xarray as xr
+    return
+
+
+@app.cell
+def _():
+    # seis_coord[0, 0]
+    return
+
+
+@app.cell
+def _():
+    # seis_np.shape, np.linspace(0, 5000, 1252).shape
+    return
+
+
+@app.cell
+def _():
+    # np.arange(0, 5000+8, 4).shape
+    return
+
+
+@app.cell
+def _():
+    # coord_xr = xr.DataArray(
+    #     data=seis_lines,
+    #     dims=["IL", "XL", "LINE"],
+    #     coords= dict(
+    #         IL = ilines,
+    #         XL = xlines,
+    #         LINE = ["IL", "XL"],
+    #         LATITUDE=(["IL", "XL"], seis_coord[:, :, 0]),
+    #         LONGITUDE=(["IL", "XL"], seis_coord[:, :, 1]),
+    #     ),
+    # )
+    # coord_xr
+    return
+
+
+@app.cell
+def _():
+
+    # seis_xr = xr.DataArray(
+    #     data=seis_np,
+    #     dims=["IL", "XL", "TWT"],
+    #     coords= dict(
+    #         IL = ilines,
+    #         XL = xlines,
+    #         TWT = np.arange(0, 5000+8, 4).astype("float32"),
+    #         LATITUDE=(["IL", "XL"], seis_coord[:, :, 0]),
+    #         LONGITUDE=(["IL", "XL"], seis_coord[:, :, 1]),
+    #     ),
+    # )
+
+    return
+
+
+@app.cell
+def _():
+    # coord_xr.isel(XL=list(range(0, n_xlines, 20)), IL=list(range(0, n_ilines, 20))).data.shape
+    return
+
+
+@app.cell
+def _():
+    # _f, _ax =  plt.subplots(figsize=(18,10))
+    # # _ax.imshow(seis_np[:, :, 100])
+    # seis_xr.isel(TWT=100).plot(x="LONGITUDE", y="LATITUDE", cmap=seiscmap(), ax=_ax)
+    # coord_xr.isel(XL=list(range(0, 100, 20))).plot(x="LONGITUDE", y="LATITUDE", ax=_ax)
+    # # seis_xr
+    # plt.show()
+    return
+
+
+@app.cell
+def _():
+    return
+
+
+@app.cell
+def _():
+    # plt.imshow(seis_lines[:, :, 1], cmap="jet", )
+    return
+
+
+@app.cell
 def _():
     from seiscm import seismic as seiscmap
     from io import BytesIO, StringIO
@@ -277,17 +370,20 @@ def _():
 @app.cell
 def _(BytesIO, plt):
     def save_fig_buf(f):
-            buf = BytesIO()
+        buf = BytesIO()
+        if f == None:
             plt.gcf()
-            plt.savefig(buf, bbox_inches='tight', format="png")
-            return buf
+            plt.savefig(buf, bbox_inches='tight', format="png", dpi=300.0)
+        else:
+            f.savefig(buf, bbox_inches='tight', format="png", dpi=300.0)
+        return buf
 
     def save_tex_buf(string):
         return string.encode("utf-8")
     return save_fig_buf, save_tex_buf
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(n_ilines, n_xlines, nsample):
     sample_rate = 4
     IL_START = 58
@@ -437,10 +533,10 @@ def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
         fig_iline, ax_iline = plt.subplots(1,2, figsize=(10,7), sharey=False, layout="compressed")
         ax_iline[0].imshow(data[idxs[0], :, :].transpose(), seiscmap(), aspect="auto", **minmax)
         ax_iline[1].imshow(data[idxs[1], :, :].transpose(), seiscmap(), aspect="auto", **minmax)
-    
+
         _n = 75 if not n else n
         _m = 1000
-    
+
         _yticks = np.arange(0, dims[2], _n)
         _ytickslabel = [
             str(x)[:5] for x in np.linspace(
@@ -521,11 +617,11 @@ def _(mo, np, plt, save_fig_buf, seiscmap, vminmax):
         minmax      : dict[str, float] = vminmax,
         n           : int | None = None
     ) -> mo.Html:
-    
+
         fig_xline, ax_xline = plt.subplots(1,2, figsize=(10,7), sharey=False, layout="compressed")
         _n = 75 if not n else n
         _m = 1000
-    
+
         ax_xline[0].imshow(data[:,idxs[0],:].transpose(), seiscmap(), aspect="auto", **minmax)
         ax_xline[1].imshow(data[:,idxs[1],:].transpose(), seiscmap(), aspect="auto", **minmax)
 
@@ -757,7 +853,7 @@ def _(mo, pd, save_tex_buf, seis_stats):
     ori_latex = [
         mo.hstack([mo.md(r"""## Original""").center(),
         _download_lazy.center()]),
-        mo.ui.text_area(_latex_tabel, rows=10, full_width=True, max_length=100),
+        mo.ui.text_area(_latex_tabel, rows=10, full_width=True, max_length=1000),
     ]
     return (ori_latex,)
 
@@ -805,8 +901,15 @@ def _(hist_binsize, np, pltPatches, pltPath, seis_flatten):
 
 @app.cell
 def _(make_histogram_seis, plt):
-    fig_stat, ax_stat = plt.subplots(1,1, figsize=(5,5))
+    fig_stat = plt.figure(figsize=(5,5))
+    ax_stat = fig_stat.add_subplot(1,1, 1)
     N, bins, patches = make_histogram_seis()
+    # FIG_STAT = mo.download(
+    #     data = save_fig_buf(f=None),
+    #     filename = _fig_file_name,
+    #     label = _fig_file_name
+    # )
+
     return ax_stat, fig_stat, patches
 
 
@@ -822,13 +925,15 @@ def _(
     mo,
     np,
     patches,
+    plt,
     save_fig_buf,
     table_stat,
 ):
     line_colors_stats = cycle(["r", 'k', 'b', 'g', 'orange'])
 
     n_stats_to_plot = len(table_stat.value)
-    ax_stat.clear(); ax_stat.add_patch(patches)
+    ax_stat.clear()
+    ax_stat.add_patch(patches)
     _xlabel = np.linspace(SEIS_MIN-1, SEIS_MAX+1, 9)
     _fig_file_name = ["KerryOriginal", str(hist_binsize.value)]
 
@@ -852,6 +957,7 @@ def _(
     ax_stat.set_xticks(_xlabel, _xlabel, rotation=90)
     ax_stat.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     _fig_file_name = "_".join(_fig_file_name)
+    _ = plt.gcf()
     _download_lazy = mo.download(
         data = save_fig_buf(f=fig_stat),
         filename = _fig_file_name,
@@ -884,7 +990,7 @@ def _(SEIS_MEAN, SEIS_STD, masked_crop_data, np):
     return seis_flatten_stdr, seis_stats_stdr
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo, pd, save_tex_buf, seis_stats_stdr):
     _df = pd.DataFrame(seis_stats_stdr)
     _filename = "KerryStandardize_hist"
@@ -893,15 +999,18 @@ def _(mo, pd, save_tex_buf, seis_stats_stdr):
     \\label{{tab:{_filename}}}
     {_df.to_latex(index=False)}\\end{{tabel}}"""
     _download_lazy = mo.download(
-        data = save_tex_buf(_latex_tabel),
-        filename = _filename + ".tex",
-        label=_filename + ".tex"
-    )
+        data = save_tex_buf(_latex_tabel), filename = _filename + ".tex",
+        label=_filename + ".tex")
 
     std_latex = [
-        mo.hstack([mo.md(r"""## Cropped & Standardization""").center(),
-        _download_lazy.center()]),
-        mo.ui.text_area(_latex_tabel, rows=10, full_width=True, max_length=100),
+        mo.hstack([
+            mo.md(r"""## Cropped & Standardization""").center(),
+            _download_lazy.center()
+        ]),
+        mo.ui.text_area(_latex_tabel,
+                        rows=10,
+                        full_width=True,
+                        max_length=1000),
     ]
     return (std_latex,)
 
@@ -909,7 +1018,6 @@ def _(mo, pd, save_tex_buf, seis_stats_stdr):
 @app.cell
 def _(mo, seis_stats_stdr, std_latex):
     table_stat_stdr = mo.ui.table(data=seis_stats_stdr, pagination=False)
-
     mo.vstack(
         std_latex + [
             mo.md("Select Statistic Values to be plot!").center(),
@@ -1401,7 +1509,7 @@ def _(np, to_be_saved_cropped):
     return seis_flatten_crop, seis_stats_stdr_crop
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo, pd, save_tex_buf, seis_stats_stdr_crop):
     _df = pd.DataFrame(seis_stats_stdr_crop)
     _filename = "KerryStandardize_hist"
@@ -1417,12 +1525,12 @@ def _(mo, pd, save_tex_buf, seis_stats_stdr_crop):
     croped_latex = [
         mo.hstack([mo.md(r"""## Cropped""").center(),
         _download_lazy.center()]),
-        mo.ui.text_area(_latex_tabel, rows=10, full_width=True, max_length=100),
+        mo.ui.text_area(_latex_tabel, rows=10, full_width=True, max_length=1000),
     ]
     return (croped_latex,)
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(croped_latex, mo, seis_stats_stdr_crop):
     table_stat_crop = mo.ui.table(data=seis_stats_stdr_crop, pagination=False)
 
