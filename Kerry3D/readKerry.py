@@ -2021,10 +2021,10 @@ def _(
     depth_crop_start,
     il_crop_end,
     il_crop_start,
+    masked_crop_data,
     mo,
     run_button_cropped,
     save_on_click,
-    to_be_saved_cropped,
     xl_crop_end,
     xl_crop_start,
 ):
@@ -2040,7 +2040,7 @@ def _(
         ])
     # print(_suffix)
     if run_button_cropped.value:
-        BUTTON_CROPPED = save_on_click(data=to_be_saved_cropped, suffix=_suffix, save_mask=False, mask=None)
+        BUTTON_CROPPED = save_on_click(data=masked_crop_data, suffix=_suffix, save_mask=False, mask=None)
     else:
         BUTTON_CROPPED = mo.md("### Save Cropped data to `.npz`").center()
     return (BUTTON_CROPPED,)
