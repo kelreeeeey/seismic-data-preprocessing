@@ -11,6 +11,8 @@ __pycache__/
 *.npz
 *.zgy
 *.zgy*
+*.zarr/
+*.nc
 
 # marimo
 __marimo__/
