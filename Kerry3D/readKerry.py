@@ -1260,7 +1260,7 @@ def _(MASK, filedir, mo, seis_xr, time):
             subtitle="Please wait",
         ) as _bar:
             _bar.update(subtitle="Saving Data")
-            _x = seis_xr.reset_coords(names=["XLINES", "ILINES"], drop=True)
+            _x = data.reset_coords(names=["XLINES", "ILINES"], drop=True)
             _x.to_netcdf(filedir / f"kerry3d{suffix}.nc")
             if save_mask:
                 # np.savez(filedir / f"kerry3d_mask{suffix}", mask.astype(np.int16))
