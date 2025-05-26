@@ -1119,7 +1119,7 @@ def _():
     return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(
     Any,
     ESPG,
