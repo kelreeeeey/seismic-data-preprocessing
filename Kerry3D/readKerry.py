@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.13.11"
+__generated_with = "0.14.0"
 app = marimo.App(width="columns", layout_file="layouts/readKerry.grid.json")
 
 
@@ -965,7 +965,7 @@ def _(
 
             if _count != 0: # last subplot
                 _labels.update({"ylabel":""})
-                north_arrow(ax=_ax, location="upper right", rotation={"degrees":-2})
+                north_arrow(ax=_ax, location="upper right", rotation={"degrees":2})
                 data.sel({axis:_twt_idx}).plot(
                     ax=_ax, **_plotting_vars, add_colorbar=True, cbar_kwargs=_plotting_cbar, **minmax)
 
@@ -1209,7 +1209,7 @@ def _(
 
             _ax.set_xlim(_xmin - _offset_limx, _xmax + _offset_limx)
             _ax.set_ylim(_ymin - _offset_limy, _ymax + _offset_limy)
-            _ax.invert_yaxis()
+            # _ax.invert_yaxis()
 
             _ax.set(**_labels)
             _count += 1
@@ -1318,10 +1318,10 @@ def _(mo):
 def _(mo, pd, save_tex_buf, seis_stats):
     _df = pd.DataFrame(seis_stats)
     _filename = "KerryOriginal_hist"
-    _latex_tabel = f"""\\begin{{tabel}}[ht!]
-    \\caption{{{_filename}}}
+    _latex_tabel = f"""\\begin{{table}}[ht!]
+    \\caption{{{_filename.replace('_', ' ')}}}
     \\label{{tab:{_filename}}}
-    {_df.to_latex(index=False)}\\end{{tabel}}"""
+    {_df.to_latex(index=False)}\\end{{table}}"""
     _download_lazy = mo.download(
         data = save_tex_buf(_latex_tabel),
         filename = _filename + ".tex",
@@ -1449,14 +1449,21 @@ def _(mo):
 
 @app.cell
 def _(masked_crop_data):
-    SEIS_MAX_stdr = masked_crop_data.max().data # np.nanmax(seis_flatten_stdr)
-    SEIS_MIN_stdr = masked_crop_data.min().data # np.nanmin(seis_flatten_stdr)
+    cropped_strd = (masked_crop_data - masked_crop_data.mean().data) / masked_crop_data.std().data
+    return (cropped_strd,)
+
+
+@app.cell
+def _(cropped_strd):
+
+    SEIS_MAX_stdr = cropped_strd.max().data # np.nanmax(seis_flatten_stdr)
+    SEIS_MIN_stdr = cropped_strd.min().data # np.nanmin(seis_flatten_stdr)
     seis_stats_stdr = {}
     seis_stats_stdr['max'] = SEIS_MAX_stdr
     seis_stats_stdr['min'] = SEIS_MIN_stdr
-    seis_stats_stdr['std'] = masked_crop_data.std().data
-    seis_stats_stdr['mean'] = masked_crop_data.mean().data # (seis_flatten_stdr)
-    seis_stats_stdr['median'] = masked_crop_data.median().data # (seis_flatten_stdr)
+    seis_stats_stdr['std'] = cropped_strd.std().data
+    seis_stats_stdr['mean'] = cropped_strd.mean().data # (seis_flatten_stdr)
+    seis_stats_stdr['median'] = cropped_strd.median().data # (seis_flatten_stdr)
     seis_stats_stdr = [dict(Statistic=stat, Value=val) for stat, val in seis_stats_stdr.items()]
     return (seis_stats_stdr,)
 
@@ -1465,10 +1472,10 @@ def _(masked_crop_data):
 def _(mo, pd, save_tex_buf, seis_stats_stdr):
     _df = pd.DataFrame(seis_stats_stdr)
     _filename = "KerryStandardize_hist"
-    _latex_tabel = f"""\\begin{{tabel}}[ht!]
-    \\caption{{{_filename}}}
+    _latex_tabel = f"""\\begin{{table}}[ht!]
+    \\caption{{{_filename.replace('_', ' ')}}}
     \\label{{tab:{_filename}}}
-    {_df.to_latex(index=False)}\\end{{tabel}}"""
+    {_df.to_latex(index=False)}\\end{{table}}"""
     _download_lazy = mo.download(
         data = save_tex_buf(_latex_tabel), filename = _filename + ".tex",
         label=_filename + ".tex")
@@ -1676,6 +1683,12 @@ def _(
         ))
     # masked_crop_data
     return (masked_crop_data,)
+
+
+@app.cell
+def _(masked_crop_data):
+    masked_crop_data.shape
+    return
 
 
 @app.cell(hide_code=True)
@@ -2089,11 +2102,11 @@ def _(
     | DEPTH     | {z1}  | {z2}  |
     """).center().batch(
         xl1 = mo.ui.number(start=xl_crop_start, stop=xl_crop_end, step=1, label="", value=xl_crop_start),
-        xl2 = mo.ui.number(start=xl_crop_start, stop=xl_crop_end, step=1, label="", value=xl_crop_end-1),
+        xl2 = mo.ui.number(start=xl_crop_start, stop=xl_crop_end, step=1, label="", value=xl_crop_end),
         il1 = mo.ui.number(start=il_crop_start, stop=il_crop_end, step=1, label="", value=il_crop_start,),
-        il2 = mo.ui.number(start=il_crop_start, stop=il_crop_end, step=1, label="", value=il_crop_end - 1,),
+        il2 = mo.ui.number(start=il_crop_start, stop=il_crop_end, step=1, label="", value=il_crop_end,),
         z1 = mo.ui.number(start=depth_crop_start,  stop=depth_crop_end,  step=sample_rate, label="", value=depth_crop_start),
-        z2 = mo.ui.number(start=depth_crop_start,  stop=depth_crop_end,  step=sample_rate, label="", value=depth_crop_end - 1),
+        z2 = mo.ui.number(start=depth_crop_start,  stop=depth_crop_end,  step=sample_rate, label="", value=depth_crop_end),
     ).form()
     boundary_cropped
     return (boundary_cropped,)
@@ -2116,6 +2129,12 @@ def _(TpVal, boundary_cropped):
         xline_full_crp,
         xline_full_crp_2,
     )
+
+
+@app.cell
+def _(boundary_cropped):
+    boundary_cropped.value
+    return
 
 
 @app.cell(hide_code=True)

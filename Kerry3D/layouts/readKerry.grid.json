@@ -32,7 +32,12 @@
         ]
       },
       {
-        "position": null
+        "position": [
+          61,
+          753,
+          25.25,
+          11
+        ]
       },
       {
         "position": null
@@ -214,6 +219,9 @@
         "position": null
       },
       {
+        "position": null
+      },
+      {
         "position": [
           58,
           339,
@@ -234,6 +242,9 @@
           33,
           54
         ]
+      },
+      {
+        "position": null
       },
       {
         "position": null
@@ -344,6 +355,9 @@
           25.25,
           26
         ]
+      },
+      {
+        "position": null
       },
       {
         "position": null
